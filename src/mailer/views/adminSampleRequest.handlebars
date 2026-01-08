@@ -1,0 +1,30 @@
+<div
+    style="font-family: Arial, sans-serif; text-align: center; border: 1px solid #ddd; padding: 10px; max-width: 600px; margin: auto;">
+    <img src="https://www.obana.africa/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fobana.africa.6c072a90.png&w=1920&q=75"
+        alt="Obana Office Logo" style="width: 100px; margin-bottom: 1px;" />
+    <p style="font-size: 16px; color: #555;">Product Sample Requests</p>
+    <p style="font-size: 16px; color: #555;">Hello Admin,</p>
+
+    <p style="font-size: 12px; color: #555;">Below customer has requested product sample.</p>
+    <p style="font-size: 16px; text-align: left; color: #555; padding-left: 10px">&spades; Customer Details</p>
+    <p style="font-size: 12px; text-align: left; color: #555; padding-left: 30px">&#x261E; Name: {{name}}</p>
+    <p style="font-size: 12px; text-align: left; color: #555; padding-left: 30px">&#x261E; Email: {{email}}</p>
+    <p style="font-size: 12px; text-align: left; color: #555; padding-left: 30px">&#x261E; Phone: {{phone}}</p>
+    <p style="font-size: 16px; text-align: left; color: #555; padding-left: 10px">&spades; Product Details:</p>
+
+    <table style=" border: 1px solid black; border-collapse: collapse; padding-left: 30px">
+        <tr>
+            <th style=" border: 1px solid #555; color: #555;">Product Name</th>
+            <th style=" border: 1px solid #555; color: #555;">Product SKU</th>
+        </tr>
+            {{#each product}}
+        <tr>
+            <td style=" border: 1px solid #555; text-align: left; color: #555;">{{this.product_name}} </td>
+            <td style=" border: 1px solid #555; text-align: left; color: #555;">{{this.sku}}  </td>
+        </tr>
+          {{/each}}
+    </table>
+    <p style="font-size: 16px; text-align: left; color: #555; padding-left: 30px">&#x261E; Date: {{date}} </p>
+    <p style="font-size: 12px; color: #999;">Need help? Contact us at contact@obana.africa.</p>
+
+</div> 

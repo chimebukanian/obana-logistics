@@ -1,0 +1,19 @@
+version: '2'
+services:
+  app:
+      build: .
+      ports:
+          - 3005:3005
+      volumes:
+       - .:/app
+       - /app/node_modues
+      env_file:
+          - ./.env
+      container_name: obana
+      restart: always
+      networks:
+        - servers_external_network
+      tty: true
+networks:
+  servers_external_network:
+    external: true
