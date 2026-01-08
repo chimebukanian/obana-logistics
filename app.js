@@ -18,7 +18,7 @@ const orderRoute = require('./src/routes/orders');
 const zohoRoute = require('./src/routes/zoho');
 const notificationRoute = require('./src/routes/notification');
 const shipmentRoute = require('./src/routes/shipment');
-
+const shipmentRoutes = require('./routes/shipments')
 
 
 const PORT = process.env.PORT;
@@ -177,6 +177,7 @@ app.use((req, res, next) => {
 })
 
 app.use('/shipment', shipmentRoute);
+app.use('/shipments', shipmentRoutes);
 app.use('/users', usersRoute);
 app.use('/products', productsRoute);
 app.use('/zoho', zohoRoute);
