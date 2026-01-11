@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Status Update</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #ddd;">
+        
+        <div style="background-color: #0047AB; padding: 15px; text-align: center;">
+            <h2 style="color: white; margin: 0;">Shipment Status Update</h2>
+        </div>
+        
+        <div style="padding: 20px;">
+            <p>Hello Team,</p>
+            
+            <div style="background-color: {{statusColor}}; color: white; padding: 10px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                <h3 style="margin: 0;">{{status}}</h3>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Tracking Number:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">{{shipment_reference}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Order Reference:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{order_reference}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Vendor:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{vendor_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Description:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{status_description}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Location:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{location}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">Updated By:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{updated_by}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">Time:</td>
+                    <td style="padding: 8px;">{{updated_at}}</td>
+                </tr>
+            </table>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{dashboard_url}}/shipments/{{shipment_reference}}" 
+                   style="background-color: #0047AB; color: white; padding: 10px 20px; 
+                          text-decoration: none; border-radius: 5px;">
+                   View Details
+                </a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #eee;">
+            <p style="color: #666; font-size: 12px; text-align: center;">
+                Obana Logistics System
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -174,20 +174,53 @@ const sendNewShipmentEmail = async (shipment, deliveryAddress, pickupAddress) =>
         });
 
         
-        if (process.env.LOGISTICS_TEAM_EMAIL) {
-            await nodemailer.sendMail({
-                email: process.env.LOGISTICS_TEAM_EMAIL,
-                subject: `New Shipment: ${shipment.shipment_reference} - ${shipment.vendor_name}`,
-                content: emailData,
-                template: 'newShipment'
-            });
-        }
 
-        console.log(`📧 Email sent for shipment ${shipment.shipment_reference}`);
+        console.log(`Email sent for shipment ${shipment.shipment_reference}`);
 
     } catch (error) {
         console.error('Error sending shipment email:', error);
         // Don't throw error, just log it
+    }
+}
+
+/**
+ * Send status update email
+ */
+const sendStatusUpdateEmail = async (shipment, status, trackingEvent) => {
+    try {
+        const statusEmails = {
+            'pickup_assigned': ['obanaafrica@gmail.com', process.env.DRIVER_MANAGER_EMAIL],
+            'picked_up': ['obanaafrica@gmail.com'],
+            'delivered': ['obanaafrica@gmail.com', process.env.ACCOUNTS_EMAIL],
+            'failed': ['obanaafrica@gmail.com', process.env.SUPPORT_EMAIL]
+        };
+
+        const emails = statusEmails[status] || ['obanaafrica@gmail.com'];
+        
+        const emailData = {
+            shipment_reference: shipment.shipment_reference,
+            order_reference: shipment.order_reference,
+            vendor_name: shipment.vendor_name,
+            status: status,
+            status_description: trackingEvent.description || `Status changed to ${status}`,
+            location: trackingEvent.location || 'Not specified',
+            notes: trackingEvent.notes || '',
+            updated_by: trackingEvent.performed_by || 'System',
+            updated_at: new Date(trackingEvent.createdAt).toLocaleString(),
+            dashboard_url: process.env.DASHBOARD_URL || 'https://dashboard.obana.africa'
+        };
+
+        for (const email of emails) {
+            await nodemailer.sendMail({
+                email: email,
+                subject: `🔄 Shipment Update: ${shipment.shipment_reference} - ${status.toUpperCase()}`,
+                content: emailData,
+                template: 'statusUpdate' // You'll need to create this template
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending status update email:', error);
     }
 }
 // Controller object
@@ -364,8 +397,8 @@ const shipmentController = {
                         carrier_type: isInternal ? 'internal' : 'external'
                     }
                 }, { transaction });
-                await sendNewShipmentEmail(shipment, deliveryAddress, pickupAddress);
-                // 9. If external, log the external carrier request
+                
+                
                 if (!isInternal) {
                     console.log(`[EXTERNAL CARRIER] Shipment ${shipmentReference} assigned to ${payload.dispatcher?.carrier_name || 'External Carrier'}`);
                     console.log(`[EXTERNAL CARRIER] Reference: ${payload.carrier_reference}, Rate ID: ${payload.rate_id}`);
@@ -375,7 +408,7 @@ const shipmentController = {
                 }
 
                 await transaction.commit();
-
+                await sendNewShipmentEmail(shipment, deliveryAddress, pickupAddress);
                 // 10. Trigger async post-creation processes
                 triggerPostCreationProcesses(shipment.id, isInternal);
 
@@ -718,7 +751,7 @@ getAllShipments: async (req, res) => {
                     previous_status: shipment.status
                 }
             });
-
+    await sendStatusUpdateEmail(shipment, status, trackingEvent);
             return res.status(200).json({
                 success: true,
                 message: 'Shipment status updated',
