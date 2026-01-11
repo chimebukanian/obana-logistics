@@ -154,49 +154,49 @@ db.sequelize.sync({ force: false })
             as: 'driver_profile'
         });
 
-// Order -> Shipment association
-db.orders.hasMany(db.shipment, {
-    foreignKey: 'order_id',
-    as: 'shipments'
-})
+// // Order -> Shipment association
+// db.orders.hasMany(db.shipment, {
+//     foreignKey: 'order_id',
+//     as: 'shipments'
+// })
 
-db.shipment.belongsTo(db.orders, {
-    foreignKey: 'order_id',
-    as: 'order'
-})
+// db.shipment.belongsTo(db.orders, {
+//     foreignKey: 'order_id',
+//     as: 'order'
+// })
 
-// Shipment -> Shipment History association
-db.shipment.hasMany(db.shipment_history, {
-    foreignKey: 'shipment_id',
-    as: 'history'
-})
+// // Shipment -> Shipment History association
+// db.shipment.hasMany(db.shipment_history, {
+//     foreignKey: 'shipment_id',
+//     as: 'history'
+// })
 
-db.shipment_history.belongsTo(db.shipment, {
-    foreignKey: 'shipment_id',
-    as: 'shipment'
-})
+// db.shipment_history.belongsTo(db.shipment, {
+//     foreignKey: 'shipment_id',
+//     as: 'shipment'
+// })
 
-// Order -> Webhook Logs association
-db.orders.hasMany(db.webhook_logs, {
-    foreignKey: 'order_id',
-    as: 'webhook_logs'
-})
+// // Order -> Webhook Logs association
+// db.orders.hasMany(db.webhook_logs, {
+//     foreignKey: 'order_id',
+//     as: 'webhook_logs'
+// })
 
-db.webhook_logs.belongsTo(db.orders, {
-    foreignKey: 'order_id',
-    as: 'order'
-})
+// db.webhook_logs.belongsTo(db.orders, {
+//     foreignKey: 'order_id',
+//     as: 'order'
+// })
 
-// User -> Orders association (if not already exists)
-db.users.hasMany(db.orders, {
-    foreignKey: 'user_id',
-    as: 'orders'
-})
+// // User -> Orders association (if not already exists)
+// db.users.hasMany(db.orders, {
+//     foreignKey: 'user_id',
+//     as: 'orders'
+// })
 
-db.orders.belongsTo(db.users, {
-    foreignKey: 'user_id',
-    as: 'user'
-})
+// db.orders.belongsTo(db.users, {
+//     foreignKey: 'user_id',
+//     as: 'user'
+// })
 
 
 db.sequelize.sync({ force: false })
@@ -226,47 +226,47 @@ db.users.hasMany(db.user_attributes, {
 
 
 
-db.orders.hasMany(db.order_details, {
-    foreignKey: 'order_table_id',
-    as: 'v_order'
-})
+// db.orders.hasMany(db.order_details, {
+//     foreignKey: 'order_table_id',
+//     as: 'v_order'
+// })
 
-db.order_details.belongsTo(db.orders, {
-    foreignKey: 'order_table_id',
-    as: 'orders'
-})
+// db.order_details.belongsTo(db.orders, {
+//     foreignKey: 'order_table_id',
+//     as: 'orders'
+// })
 
-db.roles.belongsToMany(db.scopes, { through: 'role_scopes', foreignKey: 'role_id' });
-db.scopes.belongsToMany(db.roles, { through: 'role_scopes', foreignKey: 'scope_id' });
+// db.roles.belongsToMany(db.scopes, { through: 'role_scopes', foreignKey: 'role_id' });
+// db.scopes.belongsToMany(db.roles, { through: 'role_scopes', foreignKey: 'scope_id' });
 
-db.users.hasOne(db.wallets, {
-    foreignKey: 'user_id',
-    as: 'wallet'
-})
+// db.users.hasOne(db.wallets, {
+//     foreignKey: 'user_id',
+//     as: 'wallet'
+// })
 
-db.wallets.belongsTo(db.wallets, {
-    foreignKey: 'user_id',
-    as: 'user'
-})
+// db.wallets.belongsTo(db.wallets, {
+//     foreignKey: 'user_id',
+//     as: 'user'
+// })
 
-db.tenants.hasMany(db.endpoints, {
-    foreignKey: 'tenant_id',
-    as: 'endpoints'
-})
+// db.tenants.hasMany(db.endpoints, {
+//     foreignKey: 'tenant_id',
+//     as: 'endpoints'
+// })
 
-db.endpoints.belongsTo(db.tenants, {
-    foreignKey: 'tenant_id',
-    as: 'tenant'
-})
+// db.endpoints.belongsTo(db.tenants, {
+//     foreignKey: 'tenant_id',
+//     as: 'tenant'
+// })
 
 
-db.wallets.hasMany(db.wallet_history, {
-    foreignKey: 'wallet_id',
-    as: 'histories'
-})
+// db.wallets.hasMany(db.wallet_history, {
+//     foreignKey: 'wallet_id',
+//     as: 'histories'
+// })
 
-db.wallet_history.belongsTo(db.wallets, {
-    foreignKey: 'wallet_id',
-    as: 'wallet'
-})
+// db.wallet_history.belongsTo(db.wallets, {
+//     foreignKey: 'wallet_id',
+//     as: 'wallet'
+// })
 module.exports = db
