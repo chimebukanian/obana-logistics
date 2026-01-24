@@ -161,13 +161,13 @@ const sendNewShipmentEmail = async (shipment, deliveryAddress, pickupAddress) =>
             
             notes: shipment.notes || '',
             
-            // Dashboard URL
-            dashboard_url: process.env.DASHBOARD_URL || 'https://dashboard.obana.africa'
+            
+            dashboard_url: process.env.DASHBOARD_URL || 'https://obana.africa'
         };
 
         
         await nodemailer.sendMail({
-            email: 'obanaafrica@gmail.com', 
+            email: 'obana.africa@gmail.com', 
             subject: `New Shipment: ${shipment.shipment_reference} - ${shipment.vendor_name}`,
             content: emailData,
             template: 'newShipment'
@@ -189,13 +189,13 @@ const sendNewShipmentEmail = async (shipment, deliveryAddress, pickupAddress) =>
 const sendStatusUpdateEmail = async (shipment, status, trackingEvent) => {
     try {
         const statusEmails = {
-            'pickup_assigned': ['obanaafrica@gmail.com', process.env.DRIVER_MANAGER_EMAIL],
-            'picked_up': ['obanaafrica@gmail.com'],
-            'delivered': ['obanaafrica@gmail.com', process.env.ACCOUNTS_EMAIL],
-            'failed': ['obanaafrica@gmail.com', process.env.SUPPORT_EMAIL]
+            'pickup_assigned': ['obana.africa@gmail.com', process.env.DRIVER_MANAGER_EMAIL],
+            'picked_up': ['obana.africa@gmail.com'],
+            'delivered': ['obana.africa@gmail.com', process.env.ACCOUNTS_EMAIL],
+            'failed': ['obana.africa@gmail.com', process.env.SUPPORT_EMAIL]
         };
 
-        const emails = statusEmails[status] || ['obanaafrica@gmail.com'];
+        const emails = statusEmails[status] || ['obana.africa@gmail.com'];
         
         const emailData = {
             shipment_reference: shipment.shipment_reference,
@@ -207,7 +207,7 @@ const sendStatusUpdateEmail = async (shipment, status, trackingEvent) => {
             notes: trackingEvent.notes || '',
             updated_by: trackingEvent.performed_by || 'System',
             updated_at: new Date(trackingEvent.createdAt).toLocaleString(),
-            dashboard_url: process.env.DASHBOARD_URL || 'https://dashboard.obana.africa'
+            dashboard_url: process.env.DASHBOARD_URL || 'https://obana.africa'
         };
 
         for (const email of emails) {
@@ -751,7 +751,7 @@ getAllShipments: async (req, res) => {
                     previous_status: shipment.status
                 }
             });
-    await sendStatusUpdateEmail(shipment, status, trackingEvent);
+    await sendStatusUpdateEmail(shipment, status, req.body);
             return res.status(200).json({
                 success: true,
                 message: 'Shipment status updated',

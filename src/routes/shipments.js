@@ -14,13 +14,13 @@ const controller =  shipmentController
     router.get('/users/:user_id', controller.getUserShipments);
     
     
+    // router.post('/webhooks/:carrier', controller.handleCarrierWebhook);
     router.put('/status/:shipment_id', controller.updateShipmentStatus);
 
 
     router.post('/cancel/:shipment_id', controller.cancelShipment);
     
 router.get('', controller.getAllShipments);
-    // router.post('/webhooks/:carrier', controller.handleCarrierWebhook);
     
     
 module.exports = router;
