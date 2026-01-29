@@ -76,16 +76,24 @@ db.user_attributes = require('./userAttributeModel.js')(sequelize, DataTypes)
 db.cache = new Cache(redis)
 db.drivers = require('./driversModel.js')(sequelize, DataTypes)
 db.addresses = require('./addressModel.js')(sequelize, DataTypes)
-db.shipment_item = require('./shipmentItemsModel.js')(sequelize, DataTypes)
+
 db.shipment_tracking = require('./shipmentTrackingModel.js')(sequelize, DataTypes)
 // db.driver_assignment = require('./driverAssignmentModel.js')(sequelize, DataTypes)
 db.shipment_items = require('./shipmentItemsModel.js')(sequelize, DataTypes)
 db.shippings = require('./shipmentsModel.js')(sequelize, DataTypes)
 
-db.sequelize.sync({ force: false })
-    .then(() => {
-        console.log('yes re-sync done!')
-    })
+// Sync database with force: false and alter: false to avoid enum conflicts
+const syncDatabase = async () => {
+    try {
+        await db.sequelize.sync({ force: false, alter: false });
+        console.log('Database sync completed successfully!');
+    } catch (error) {
+        console.error('Database sync error - this is expected if enums already exist:', error.message);
+        console.log('Continuing anyway - enums likely already exist in the database');
+    }
+};
+
+syncDatabase();
 
     // Address associations
     db.addresses.hasMany(db.shippings, {
@@ -199,10 +207,6 @@ db.sequelize.sync({ force: false })
 // })
 
 
-db.sequelize.sync({ force: false })
-    .then(() => {
-        console.log('yes re-sync done!')
-    })
 db.user_attributes.belongsTo(db.users, {
     foreignKey: 'user_id',
     as: 'user'

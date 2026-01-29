@@ -3,7 +3,7 @@ const db = require('../models/db.js')
 const { Op } = require('sequelize')
 const { sendRequest } = require('../helpers/sendRequestHelper')
 const { validateRequest, getTenantAndEndpoint } = require('../helpers/requestValidator')
-const walletController = require('../controllers/walletController')
+
 const userController = require('../controllers/userController'); // ADD THIS
 const { flattenObj } = require('../../utils');
 const utils = require('../../utils');

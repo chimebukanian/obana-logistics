@@ -22,6 +22,16 @@ const validateShipmentPayload = (payload) => {
     if (!payload.items || !Array.isArray(payload.items) || payload.items.length === 0) {
         errors.push('items array is required with at least one item');
     }
+    if (!payload.transport_mode) {
+        errors.push('transport_mode is required (road, air, or sea)');
+    } else if (!['road', 'air', 'sea'].includes(payload.transport_mode)) {
+        errors.push('transport_mode must be one of: road, air, sea');
+    }
+    if (!payload.service_level) {
+        errors.push('service_level is required (Express, Standard, or Economy)');
+    } else if (!['Express', 'Standard', 'Economy'].includes(payload.service_level)) {
+        errors.push('service_level must be one of: Express, Standard, Economy');
+    }
 
     return {
         valid: errors.length === 0,
@@ -55,6 +65,17 @@ const calculateShipmentTotals = (items) => {
     }
 
     return { totalWeight, totalValue, itemCount };
+};
+
+const getVehicleTypesForTransportMode = (transportMode) => {
+    // Map transport modes to vehicle types
+    const modeToVehicles = {
+        'road': ['car', 'van', 'truck', 'bike'],
+        'air': ['car', 'van'],  // Air requires vehicles to go to airport
+        'sea': ['van', 'truck']  // Sea requires larger vehicles for port delivery
+    };
+    
+    return modeToVehicles[transportMode] || ['car', 'bike', 'van', 'truck'];
 };
 
 const triggerPostCreationProcesses = async (shipmentId, isInternal) => {
@@ -338,6 +359,8 @@ const shipmentController = {
                     carrier_type: isInternal ? 'internal' : 'external',
                     carrier_name: isInternal ? 'Obana Logistics' : (payload.dispatcher?.carrier_name || 'External Carrier'),
                     carrier_slug: isInternal ? 'obana' : (payload.dispatcher?.carrier_slug || 'external'),
+                    transport_mode: payload.transport_mode || 'road',
+                    service_level: payload.service_level || 'Standard',
                     external_carrier_reference: isInternal ? null : payload.carrier_reference,
                     external_rate_id: isInternal ? null : payload.rate_id,
                     delivery_address_id: deliveryAddress.id,
@@ -364,6 +387,36 @@ const shipmentController = {
                     },
                     notes: payload.notes || ''
                 }, { transaction });
+
+                // 6.5 Auto-assign driver for internal shipments
+                if (isInternal) {
+                    try {
+                        // Find an available driver based on transport mode
+                        const availableDriver = await db.drivers.findOne({
+                            where: {
+                                status: 'active',
+                                vehicle_type: {
+                                    [Op.in]: getVehicleTypesForTransportMode(payload.transport_mode)
+                                }
+                            },
+                            order: [
+                                // Prefer drivers with lower delivery count
+                                ['total_deliveries', 'ASC']
+                            ]
+                        });
+
+                        if (availableDriver) {
+                            shipment.driver_id = availableDriver.id;
+                            await shipment.save({ transaction });
+                            console.log(`[DRIVER ASSIGNMENT] Assigned driver ${availableDriver.driver_code} to shipment ${shipmentReference}`);
+                        } else {
+                            console.warn(`[DRIVER ASSIGNMENT] No available driver found for transport_mode: ${payload.transport_mode}`);
+                        }
+                    } catch (driverError) {
+                        console.error('[DRIVER ASSIGNMENT] Error assigning driver:', driverError);
+                        // Don't fail the shipment creation if driver assignment fails
+                    }
+                }
 
                 // 7. Create shipment items
                 if (payload.items && Array.isArray(payload.items) && payload.items.length > 0) {

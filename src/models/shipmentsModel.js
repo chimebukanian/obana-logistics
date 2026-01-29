@@ -48,6 +48,20 @@ module.exports = (sequelize, DataTypes) => {
             comment: 'obana, fedex, dhl, ups'
         },
         
+        transport_mode: {
+            type: DataTypes.ENUM('road', 'air', 'sea'),
+            defaultValue: 'road',
+            allowNull: false,
+            comment: 'Transportation method for the shipment'
+        },
+        
+        service_level: {
+            type: DataTypes.ENUM('Express', 'Standard', 'Economy'),
+            defaultValue: 'Standard',
+            allowNull: false,
+            comment: 'Service level/speed tier'
+        },
+        
         external_carrier_reference: {
             type: DataTypes.STRING(100),
             allowNull: true,

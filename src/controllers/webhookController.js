@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const crypto = require('crypto');
 const nodemailer = require('../mailer/nodemailer.js');
 const userController = require('./userController');
-const walletController = require('./walletController');
+
 
 class WebhookController {
 

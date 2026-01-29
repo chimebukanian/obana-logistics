@@ -8,7 +8,7 @@ const controller =  shipmentController
     router.post('', controller.createShipment);
     
     
-    router.get('/:shipment_reference', controller.getShipment);
+    router.get('/track/:shipment_reference', controller.getShipment);
     
     
     router.get('/users/:user_id', controller.getUserShipments);

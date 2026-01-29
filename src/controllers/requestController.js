@@ -3,7 +3,7 @@ const { EventstHelper } = require('../helpers/eventsHelper')
 const { WeebHooksHelper } = require('../helpers/webHooksHelper')
 const { sendRequest } = require('../helpers/sendRequestHelper')
 const { validateRequest, getTenantAndEndpoint } = require('../helpers/requestValidator')
-const { sampleRequestHelper } = require('../helpers/sampleRequestHelper')
+
 
 
 /**

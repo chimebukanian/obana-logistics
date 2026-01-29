@@ -4,20 +4,8 @@ const cors = require('cors')
 
 
 const usersRoute = require('./src/routes/users');
-const productsRoute = require('./src/routes/products');
-const categoriesRoute = require('./src/routes/categories');
 const verificationRoute = require('./src/routes/verification');
-const tenantsRoute = require('./src/routes/tenants');
-const endpointsRoute = require('./src/routes/endpoints');
 const requestsRoute = require('./src/routes/requests');
-const storesRoute = require('./src/routes/stores');
-const wishRoute = require('./src/routes/wish');
-const cartRoute = require('./src/routes/cart');
-const walletRoute = require('./src/routes/wallet');
-const orderRoute = require('./src/routes/orders');
-const zohoRoute = require('./src/routes/zoho');
-const notificationRoute = require('./src/routes/notification');
-const shipmentRoute = require('./src/routes/shipment');
 const shipmentRoutes = require('./src/routes/shipments')
 
 
@@ -176,22 +164,16 @@ app.use((req, res, next) => {
     next();
 })
 
-app.use('/shipment', shipmentRoute);
+
 app.use('/shipments', shipmentRoutes);
 app.use('/users', usersRoute);
-app.use('/products', productsRoute);
-app.use('/zoho', zohoRoute);
-app.use('/categories', categoriesRoute);
+
+
+
 app.use('/verify', verificationRoute);
-app.use('/tenants', tenantsRoute);
-app.use('/endpoints', endpointsRoute);
+
 app.use('/requests', requestsRoute);
-app.use('/stores', storesRoute);
-app.use('/wish', wishRoute);
-app.use('/wallet', walletRoute);
-app.use('/cart', cartRoute);
-app.use('/orders', orderRoute);
-app.use('/mail', notificationRoute);
+
 
 
 // app.listen(PORT, () => {

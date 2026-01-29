@@ -58,6 +58,8 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
         }
+    }, {
+        tableName: 'shipment_trackings'
     });
 
     return ShipmentTracking;
