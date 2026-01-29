@@ -16,7 +16,8 @@ COPY . .
 EXPOSE 3000
 
 # Start the application
-CMD [ "npm","run", "start" ]
+
+CMD [ "sh", "-c", "npm run seed:all && npm run start" ]
 
 # Migration command
 # RUN npm run migratePro 
