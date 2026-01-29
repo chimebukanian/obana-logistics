@@ -71,6 +71,38 @@ async function seedDrivers(sequelize) {
       `DELETE FROM drivers WHERE driver_code IN ('OBANA-DRV-001', 'OBANA-DRV-002')`
     );
 
+    // Check if users exist, create them if they don't
+    const [userCheck] = await sequelize.query(
+      `SELECT id FROM users WHERE id IN (12, 13) LIMIT 2`
+    );
+
+    const existingUserIds = userCheck.map(u => u.id);
+
+    // Seed missing users if needed
+    if (!existingUserIds.includes(12)) {
+      console.log('   ℹ️  User 12 not found, creating...');
+      await sequelize.query(
+        `INSERT INTO users (id, email, phone, password, "createdAt", "updatedAt")
+         VALUES (12, 'driver1@obana.africa', '+2348069331070', 
+                 '$2a$10$qXgkEtKntBF4yy/cCIV5zu/aaxtbtWKqYwJsVYR3qyKvJI12D0uAG', 
+                 NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`
+      );
+      console.log('   ✅ Created user 12');
+    }
+
+    if (!existingUserIds.includes(13)) {
+      console.log('   ℹ️  User 13 not found, creating...');
+      await sequelize.query(
+        `INSERT INTO users (id, email, phone, password, "createdAt", "updatedAt")
+         VALUES (13, 'driver2@obana.africa', '+2348163957185', 
+                 '$2a$10$m6PINlhvvRQ5sFDWxSHJmOTHDupSPm7Sb4e5CcREsN8iB4SwlkgTW', 
+                 NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`
+      );
+      console.log('   ✅ Created user 13');
+    }
+
     // Insert drivers
     const driversData = [
       {
