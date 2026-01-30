@@ -7,6 +7,7 @@ const usersRoute = require('./src/routes/users');
 const verificationRoute = require('./src/routes/verification');
 const requestsRoute = require('./src/routes/requests');
 const shipmentRoutes = require('./src/routes/shipments')
+const routesManagement = require('./src/routes/routes')
 
 
 const PORT = process.env.PORT;
@@ -167,12 +168,9 @@ app.use((req, res, next) => {
 
 app.use('/shipments', shipmentRoutes);
 app.use('/users', usersRoute);
-
-
-
 app.use('/verify', verificationRoute);
-
 app.use('/requests', requestsRoute);
+app.use('/routes', routesManagement);
 
 
 

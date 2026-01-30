@@ -17,6 +17,7 @@ const Cart = db.carts
 const Roles = db.roles
 const Scopes = db.scopes
 const RoleScopes = db.role_scopes
+const Drivers = db.drivers
 
 /**
  * Method to request user creation
@@ -25,12 +26,20 @@ const RoleScopes = db.role_scopes
  *     email: string
  *     phone: string
  *     password: string
- *   Optional
- *     attributes: object
+ *     role: string (admin, driver, customer)
  * @param res 
  **/
 const createUserRequest = async (req, res) => {
+    try {
     req.body.email = req.body.email.toLowerCase()
+
+    // Validate role
+    const validRoles = ['admin', 'driver', 'customer'];
+    if (!req.body.role || !validRoles.includes(req.body.role)) {
+        return res.status(400).send(
+            utils.responseError(`Role is required and must be one of: ${validRoles.join(', ')}`)
+        )
+    }
 
     const user = await getUser(req.body.email, req.body.phone)
 
@@ -41,7 +50,11 @@ const createUserRequest = async (req, res) => {
     }
 
     createVerificationRequest(req.body, res, 'createUserAfterOtpVerification')
-
+    } catch (err) {
+        return res.status(500).send(
+            utils.responseError(err.message)
+        )
+    }
 }
 
 /**
@@ -51,9 +64,8 @@ const createUserRequest = async (req, res) => {
  *     email: string
  *     phone: string
  *     password: string
- *   Optional
- *     attributes: object
- * @returns {User} User
+ *     role: string (admin, driver, customer)
+ * @returns {User} User with role info
  **/
 const createUserAfterOtpVerification = async (payload, req, res) => {
     let user = await getUser(payload.email, payload.phone)
@@ -62,73 +74,46 @@ const createUserAfterOtpVerification = async (payload, req, res) => {
         throw new Error('Email or Phone number already registered')
     }
 
-    const attributes = payload.attributes
-    delete payload.attributes
-    user = await User.create(payload)
-    payload = utils.flattenObj(Object.assign(payload, attributes))
+    const { first_name, last_name, vehicle_type, vehicle_registration, role,  ...userData } = payload
     
-    const name = payload?.first_name ?? null
-    const last_name = payload?.last_name ?? null
+    // Create user
+    user = await User.create({
+        email: userData.email,
+        phone: userData.phone,
+        password: userData.password
+    })
 
+    // If user is a driver, link to driver record
+    if (role === 'driver' ) {
+       let driverObj = Drivers.create({
+            driver_code: `OBANA-DRV-${String(user.id).padStart(3, '0')}`,
+            user_id: user.id,
+            vehicle_type,
+            vehicle_registration,
+            status: 'active',
+            total_deliveries: 0,
+            successful_deliveries: 0,
+            metadata: JSON.stringify({ phone: user.phone, email: user.email, rating: 0 }),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        })
+
+        let driver_id = driverObj.id
+        await createUserAttributes(user.id, { first_name, last_name, role, driver_id})     
+    }
+    
+    // Create user attributes
+    await createUserAttributes(user.id, { first_name, last_name, role})
+    
     
 
-    if (!attributes?.account_types) attributes.account_types = 'agent'
 
-    if (attributes?.account_types && attributes?.account_types == 'agent') {
 
-        req.body = {
-            data: [{
-                "Name": name, "Last_Name": last_name, "category_of_interest": payload.category_of_interest, "brand_of_interest": payload.brand_of_interest, "dob": payload.dob, "Email": payload.email, "company_name": payload.company_name, "Phone_Number": payload.phone,
-                "Country": payload.country,
-                "State1": payload.state, "City": payload?.city
-            }], "return": 1
-        }
-        req.params = { tenant: 'crm', endpoint: 'sales-person' }
-        attributes.agent_id = generateAgentId(user.id)
-        if (name && last_name) {
-            const salesPersonData = name ? (await requestController.makeRequest(req, res)).data : null
-            
-            if (salesPersonData) attributes.sales_person_id = formatSalesPersonResponse(salesPersonData)
-        }
-    }
 
-       req.body = {
-            
-                "first_name": name, "last_name": last_name, "contact_name": name, "Category of Interest": payload.category_of_interest, "Brand of Interest":payload.brand_of_interest, "D_O_B": payload.dob,  "Email": payload.email, "company_name":payload.company_name, "Phone_Number": payload.phone,
-                "country": payload.country,
-                "state": payload.state, "city": payload?.city,
-             "return": 1
-        }
-        req.params = { tenant: 'zoho', endpoint: 'customer' }
-        
-            const contactData = name ? await requestController.makeRequest(req, res) : null
-            console.log("contactDataaa", contactData)
-
-    if (attributes?.account_types.split(',').some(item => ['agent', 'individual'].includes(item))) {
-        req.body = payload?.account_types == 'agent' ? {
-            "contact_type": "customer", "customer_sub_type": "individual",
-            "first_name": payload.first_name, "last_name": last_name,
-            "email": payload.email, "phone": payload.phone,
-            "address": payload?.city, "country": payload.country,
-            "city": payload?.city, "state": payload.state
-        } : payload
-        req.query.sales_person_id = payload?.lead
-        req.body.return = 1
-        req.params = { tenant: 'zoho', endpoint: 'customer' }
-
-        if (payload.first_name) {
-            const zohoAccountData = await requestController.makeRequest(req, res)
-            if (zohoAccountData.hasOwnProperty('data') && zohoAccountData.data.hasOwnProperty('zoho_id')) {
-                attributes.zoho_id = zohoAccountData.data.zoho_id
-            } else {
-                attributes.zoho_id = zohoAccountData.contact?.contact_id
-            }
-        }
-    }
-    await createUserAttributes(user.id, attributes)
     user = JSON.parse(JSON.stringify(user))
-    attributes ? user.attributes = attributes : ""
     delete user.password
+    user.role = role
+    
     return createAuthDetail(user)
 }
 
@@ -254,23 +239,15 @@ const withdrawRequest = async (req, res) => {
  * @returns 
  */
 const loginRequest = async (req, res) => {
+    try {
     req.body.user_identification = req.body.user_identification.toLowerCase()
     const user = await getUser(req.body.user_identification, req.body.user_identification)
 
     if (!user) {
         return res.status(401).send(
-            utils.responseError('User not found. Check your user_identification and try again')
+            utils.responseError('User not found. Check your credentials and try again')
         )
     }
-
-    const attribute = await getUserAttributes(user.id)
-    const attributes = utils.flattenObj(attribute)
-    let check = attributes.hasOwnProperty('account_types') ?
-        attributes.account_types.split(',').includes(req.body.platform) : null
-    if (!check && req.body?.platform)
-        return res.status(401).send(
-            utils.responseError('You do not have access to this platform')
-        )
 
     bcrypt.compare(req.body.password, user.password, (error, isMatch) => {
         if (isMatch) {
@@ -278,10 +255,15 @@ const loginRequest = async (req, res) => {
             createVerificationRequest(req.body, res, 'loginAfterOtpVerification')
         } else {
             return res.status(401).send(
-                utils.responseError('Wrong password. Check your password and try again')
+                utils.responseError('Wrong password. Check your credentials and try again')
             )
         }
     })
+} catch (err) {
+    return res.status(500).send(
+        utils.responseError(err.message)
+    )
+}
 }
 
 /**
@@ -291,6 +273,10 @@ const loginRequest = async (req, res) => {
  */
 const loginAfterOtpVerification = async (payload, req, res) => {
     const user = await getUser(payload.user_identification, payload.user_identification, true, req, res)
+    const attributes = utils.flattenObj(user.attributes || {})
+
+    user.role = attributes.role || attributes.role_id || 'customer'
+
     const rememberMe = payload.hasOwnProperty('remember_me') ? payload.remember_me : false
     return createAuthDetail(user, rememberMe)
 }
@@ -341,36 +327,8 @@ const updateProfile = async (req, res) => {
     user = await getUser(user.email, user.phone, true, req, res)
     const payload = utils.flattenObj(user)
 
-    req.body = payload
-    req.body.return = 1
-    req.params = { tenant: 'zoho', endpoint: 'update-customer' }
-    req.query.contact_id = user.attributes.zoho_id
-    if (
-        req.body.category_of_interest &&
-        Array.isArray(req.body.category_of_interest)
-    ) {
-        req.body.category_of_interest = req.body.category_of_interest
-            .map((item) => item.value)
-            .join(",");
-    }
-    if (
-        req.body.brand_of_interest &&
-        Array.isArray(req.body.brand_of_interest)
-    ) {
-        req.body.brand_of_interest = req.body.brand_of_interest
-            .map((item) => item.value)
-            .join(",");
-    }
-
-    if (user.attributes.zoho_id)
-        await requestController.makeRequest(req, res)
-
-    if (payload?.account_types && ['agent'].includes(payload?.account_types)) {
-        await updaeteSalesPerson(payload, req, res)
-
-        if (payload?.bank_name && payload?.account_name)
-            await updateSalesPersonPerymentInfo(payload, req, res)
-    }
+    // Update local attributes and return updated auth details
+    const userAuthPayload = utils.flattenObj(user)
     let userAuth = await createAuthDetail(user, true)
     return res.status(203).send(
         utils.responseSuccess(userAuth)
@@ -425,105 +383,32 @@ const getUser = async (email = null, phone = null, withAttr = false, req = null,
         delete user.password
         user.attributes = await getUserAttributes(user.id)
         const attributes = utils.flattenObj(user.attributes)
+
+        // Ensure a sensible default for account types
         if (!attributes.hasOwnProperty('account_types')) {
-            user.attributes.account_types = 'agent'
+            user.attributes.account_types = 'customer'
             await createUserAttributes(user.id, { account_types: user.attributes.account_types })
         }
-        if (attributes.account_types.split(',').includes('agent')) {
-            if (!attributes.hasOwnProperty('agent_id')) {
-                user.attributes.agent_id = generateAgentId(user.id)
-                await createUserAttributes(user.id, { agent_id: user.attributes.agent_id })
-            }
-            if (!attributes?.sales_person_id && req) {
-                let sales_person_id = await createZohoSalesPerson(user, req, res)
 
-                if (sales_person_id) user.attributes.sales_person_id = sales_person_id
-                if (sales_person_id) await createUserAttributes(user.id, { sales_person_id: sales_person_id })
+        // Determine role from attributes (supports either `role` string or `role_id`)
+        const roleVal = attributes.role || attributes.role_id
+        if (roleVal) {
+            if (!isNaN(Number(roleVal))) {
+                const scopeDetails = await getRolesAndScopes(roleVal)
+                const formatedScope = scopeDetails.map(items => {
+                    let role = items.role
+                    let scope = items.scope.map(item => item.name)
+                    return { role, scope: scope }
+                })
+                user.permission = formatedScope[0]
+                user.role = user.permission?.role || null
+            } else {
+                user.role = roleVal
+                user.permission = { role: roleVal, scope: [] }
             }
-        }
-        if (attributes.account_types.split(',').some(item => ['individual', 'agent'].includes(item)) && !attributes?.zoho_id) {
-            let zoho_id = attributes?.first_name && attributes?.last_name ? await createIndividualOnZoho(user, req, res) : null
-            if (zoho_id) user.attributes.zoho_id = zoho_id
-            if (zoho_id) await createUserAttributes(user.id, { zoho_id: zoho_id })
-        }
-        if (user.attributes.hasOwnProperty('role_id')) {
-            const scopeDetails = await getRolesAndScopes(user.attributes.role_id)
-            const formatedScope = scopeDetails.map(items => {
-                let role = items.role
-                let scope = items.scope.map(item => item.name)
-                return { role, scope: scope }
-            })
-            user.permission = formatedScope[0]
         }
     }
     return user
-}
-
-const createZohoSalesPerson = async (user, req, res) => {
-    let name = user.attributes?.first_name ?? user.attributes?.user_information?.first_name
-    let city = user.attributes?.city ?? user.attributes?.partner_information?.lga
-    req.body = {
-        data: [{
-            "Name": name,
-            "Last_Name": user.attributes?.last_name ?? user.attributes?.user_information?.last_name,
-            "Email": user.email, "Phone_number": user.phone, "City": city,
-            "Country": user.attributes?.country ?? user.attributes?.partner_information?.country,
-            "State1": user.attributes?.state ?? user.attributes.partner_information?.state
-        }], "return": 1
-    }
-    req.params = { tenant: 'crm', endpoint: 'sales-person' }
-
-    const salesPersonData = name ? (await requestController.makeRequest(req, res))?.data : null
-    const sales_person_id = salesPersonData ? formatSalesPersonResponse(salesPersonData) : null
-    if (sales_person_id) {
-        await createUserAttributes(user.id, { sales_person_id: sales_person_id })
-    }
-    return sales_person_id
-}
-
-const createIndividualOnZoho = async (user, req, res) => {
-    const attributes = utils.flattenObj(user)
-    const addressFields = [
-        attributes.address || '',
-        attributes.city || '',
-        attributes.state || '',
-        attributes.country || ''
-    ].filter(field => field).join(', ');
-    if (!req) return null
-    req.body = {
-        "salutation": attributes.salutation ?? "", "first_name": attributes?.first_name,
-        "last_name": attributes?.last_name, "email": attributes?.email, "phone": attributes?.phone ?? "",
-        'billing_address': attributes?.billing_address ?? "", "billing_city": attributes?.billing_city ?? "",
-        "billing_country": attributes?.billing_country ?? "", "billing_state": attributes?.billing_state ?? "",
-        "address": attributes?.address ?? "", "country": attributes?.country ?? "",
-        "city": attributes?.city ?? "", "state": attributes?.state ?? "", "custom_field_hash.cf_product_category": attributes?.category_of_interest ?? "",
-        "custom_field_hash.cf_brand_of_interest": attributes?.brand_of_interest ?? "", "custom_field_hash.cf_contact_person": addressFields,
-        return: 1
-    }
-    if (Array.isArray(attributes?.category_of_interest)) {
-        req.body["custom_field_hash.cf_product_category"] =
-            attributes.category_of_interest
-                .map((item) => item.value ?? item)
-                .join(",");
-    }
-    if (Array.isArray(attributes?.brand_of_interest)) {
-        req.body["custom_field_hash.cf_brand_of_interest"] =
-            attributes.brand_of_interest
-                .map((item) => item.value ?? item)
-                .join(",");
-    }
-
-    req.params = { tenant: 'zoho', endpoint: 'customer' }
-    try {
-        let contactData = await requestController.makeRequest(req, res)
-        const zohoContactId = contactData.hasOwnProperty('data') ? contactData.data.zoho_id : contactData.contact?.contact_id
-        if (zohoContactId) {
-            await createUserAttributes(user.id, { zoho_id: zohoContactId })
-        }
-        return zohoContactId ?? null
-    } catch (error) {
-        return error
-    }
 }
 
 
@@ -607,6 +492,8 @@ const createVerificationRequest = async (body, res = null, callback = null) => {
     const data = await prepareVerificationData(body, callback)
     try {
         const verification = await Verifications.create(data)
+        
+        console.log(verification)
         nodemailer.sendMail({ email: data.email, content: { otp: 'OTP: ' + data.otp, user: data.email }, subject: 'One Time Password', template: 'otp' })
         if (res) {
             return res.status(200).send(
@@ -688,6 +575,7 @@ const generateToken = (user, refresh = false, expiresIn = false) => {
 }
 
 const generateAgentId = (id) => {
+    // DEPRECATED - No longer used with simplified auth system
     let prefix = ''
     const length = 11 - id.toString().length
     for (let i = 0; i < length; i++) {
@@ -707,9 +595,8 @@ const createAuthDetail = async (user, rememberMe = false) => {
         : process.env.REFRESH_TOKEN_SECRET_EXPIRES_IN
     const refresh_token = generateToken(user, true, expiresIn)
     Tokens.create({ refresh_token })
-    const active_quote = await Cart.findOne({ where: { user_id: user.id } })
-    const active_quote_id = active_quote ? active_quote.qoute_id : null;
-    return { user, active_quote_id, access_token, refresh_token }
+    
+    return { user, access_token, refresh_token, role: user.role}
 }
 
 const createRole = async (req, res) => {
@@ -897,57 +784,20 @@ const addAdminUser = async (req, res) => {
     }
 }
 
-const formatSalesPersonResponse = (data) => {
-    let salesPersonId = null
-    if (!Array.isArray(data)) return null
-    for (let rec of data) {
-        if (rec.hasOwnProperty('code') && rec.code == "DUPLICATE_DATA")
-            salesPersonId = rec?.details?.id
-        else salesPersonId = rec.details.id
-    }
-    return salesPersonId
-}
+
 const deleteUserAtribute = async (slug, user_id) => {
     const roleAtribute = await Attribute.findOne({ where: { slug: slug } })
     await UserAttribute.destroy({ where: { user_id: user_id, attribute_id: roleAtribute.id } })
 }
 
-const updateSalesPersonPerymentInfo = async (payload, req, res) => {
-    req.body = {
-        "data": [
-            {
-                "Bank_Details": [{
-                    "Bank_Name": payload?.bank_name ?? "", "Account_Name": payload?.account_name ?? "",
-                    "Account_Numver": payload?.account_number ?? "", "BVN": payload?.bvn ?? ""
-                }], "id": payload.sales_person_id
-            }
-        ], "return": 1
-    }
-    req.params = { 'tenant': 'crm', 'endpoint': 'update-salesperson' }
-    req.query = { 'sales_person_id': payload.sales_person_id }
-    if (payload.bank_name && payload.account_name) {
-        const respomse = await requestController.makeRequest(req, res)
-    }
-}
 
-const updaeteSalesPerson = async (payload, req, res) => {
-    req.body = {
-        "data": [{
-            "Name": payload.first_name + " " + payload.last_name,
-            "Last_Name": payload.last_name, "Email": payload.email, "Phone_number": payload.phone,
-            "Country": payload?.country ?? "", "State1": payload?.state ?? "", "City": payload?.city ?? "",
-
-        }], return: 1
-    }
-    req.params = { 'tenant': 'crm', 'endpoint': 'update-salesperson' }
-    req.query = { 'sales_person_id': payload.sales_person_id }
-    if (payload.first_name && payload.last_name) {
-        const respomse = await requestController.makeRequest(req, res)
-
-    }
-}
 
 module.exports = {
+    // Auth endpoints
+    signup: createUserRequest,
+    signin: loginRequest,
+    
+    // Original function names (deprecated)
     createUserAfterOtpVerification,
     resetPasswordAfterOtpVerification,
     loginAfterOtpVerification,

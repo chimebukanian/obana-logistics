@@ -47,16 +47,7 @@ const executeCallBack = async (request_details, req, res, record) => {
         response = await userController.loginAfterOtpVerification(payload, req, res)
     } else if (request_details.method == 'createUserAfterOtpVerification') {
         response = await userController.createUserAfterOtpVerification(payload, req, res)
-    } else if (request_details.method === 'withdrawAfterOtpVerification') {
-        req.params.tenant = 'embedlyPayout';
-req.params.endpoint = 'embedly-bank-transfer';
-        payload.return = 1
-        req.body.return = 1
-        response = await requestController.makeRequest(req, res)
-          if (response.statusCode !== 200) {
-            throw new Error(response?.data ?? "Somthing went wrong")
-        }
-    } else {
+    }  else {
         response = await userController.resetPasswordAfterOtpVerification(payload, req, res)
     }
     return response

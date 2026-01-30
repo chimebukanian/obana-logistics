@@ -2959,7 +2959,7 @@ getBankCode = async (bankName) => {
 
 
         let salesperson = isAgent ? `${user?.first_name} ${user?.last_name ?? ""}` : `${agentDetails?.first_name ?? ""} ${agentDetails?.last_name ?? ""}`;
-        let placingOrderUser = user.sales_person_id ?? user.zoho_id;
+        let placingOrderUser = user?.sales_person_id ?? user?.attributes?.sales_person_id ?? user?.zoho_id ?? user?.attributes?.zoho_id;
 
         if (!placingOrderUser) {
             user = util.flattenObj(await walletController.getUser(user.email, user.phone, true));
@@ -3504,7 +3504,8 @@ getBankCode = async (bankName) => {
     createZohoTask = async () => {
         const user = utils.flattenObj(this.requestDetails.req?.user)
         let body = this.requestDetails.req.body
-        if (!user.sales_person_id) {
+        const salesPersonId = user.sales_person_id ?? user?.attributes?.sales_person_id
+        if (!salesPersonId) {
             throw this.requestDetails.res.status(401).send({ message: "Missing salesperson_id" })
         }
         let payload = {
@@ -3517,9 +3518,9 @@ getBankCode = async (bankName) => {
                 name: body.contactName,
                 id: body.contactId,
             },
-            What_Id: {
+                What_Id: {
                 name: `${user.file_name} ${user.last_name}`,
-                id: user.sales_person_id
+                id: salesPersonId
             },
             $se_module: "Salesperson",
             $approved: true

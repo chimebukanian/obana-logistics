@@ -44,35 +44,16 @@ const db = {}
 db.Sequelize = Sequelize
 db.sequelize = sequelize
 
-// db.products = require('./productModel.js')(sequelize, DataTypes)
-// db.categories = require('./categoryModel.js')(sequelize, DataTypes)
+
 db.users = require('./userModel.js')(sequelize, DataTypes)
-// db.verifications = require('./verificationModel.js')(sequelize, DataTypes)
-// db.tokens = require('./tokenModel.js')(sequelize, DataTypes)
+db.tokens = require('./tokenModel.js')(sequelize, DataTypes)
+db.roles = require('./roleModel.js')(sequelize, DataTypes)
+db.scopes = require('./scopeModel.js')(sequelize, DataTypes)
+db.role_scopes = require('./roleScopeModel.js')(sequelize, DataTypes)
+
 db.attributes = require('./attributeModel.js')(sequelize, DataTypes)
-// db.tenants = require('./tenantModel.js')(sequelize, DataTypes)
-// db.endpoints = require('./endpointModel.js')(sequelize, DataTypes)
-// db.requests = require('./requestModel.js')(sequelize, DataTypes)
 db.user_attributes = require('./userAttributeModel.js')(sequelize, DataTypes)
-// db.stores = require('./storeModel.js')(sequelize, DataTypes)
-// db.wish_list = require('./wishModel.js')(sequelize, DataTypes)
-// db.carts = require('./cartModel.js')(sequelize, DataTypes)
-// db.order_details = require('./orderDetailsModel.js')(sequelize, DataTypes)
-// db.orders = require('./orderModel.js')(sequelize, DataTypes)
-// db.wallets = require('./walletModel.js')(sequelize, DataTypes)
-// db.wallet_history = require('./walletHistoryModel.js')(sequelize, DataTypes)
-// db.rate = require('./rateModel.js')(sequelize, DataTypes)
-// db.store_products = require('./storeProductModel.js')(sequelize, DataTypes)
-// db.brand = require('./brandModel.js')(sequelize, DataTypes)
-// db.roles = require('./roleModel.js')(sequelize, DataTypes)
-// db.scopes = require('./scopeModel.js')(sequelize, DataTypes)
-// db.role_scopes = require('./roleScopeModel.js')(sequelize, DataTypes)
-// db.product_samples = require('./productSampleModel.js')(sequelize, DataTypes)
-// db.quote = require('./quoteModel.js')(sequelize, DataTypes)
-// db.orderReturns = require('./orderReturnModel.js')(sequelize, DataTypes)
-// db.shipment = require('./shipmentModel.js')(sequelize, DataTypes)
-// db.shipment_history = require('./shipmentHistoryModel.js')(sequelize, DataTypes)
-// db.webhook_logs = require('./webhookLogsModel.js')(sequelize, DataTypes)
+
 db.cache = new Cache(redis)
 db.drivers = require('./driversModel.js')(sequelize, DataTypes)
 db.addresses = require('./addressModel.js')(sequelize, DataTypes)
@@ -81,7 +62,8 @@ db.shipment_tracking = require('./shipmentTrackingModel.js')(sequelize, DataType
 // db.driver_assignment = require('./driverAssignmentModel.js')(sequelize, DataTypes)
 db.shipment_items = require('./shipmentItemsModel.js')(sequelize, DataTypes)
 db.shippings = require('./shipmentsModel.js')(sequelize, DataTypes)
-
+db.verifications = require('./verificationModel.js')(sequelize, DataTypes)
+db.route_templates = require('./routeTemplateModel.js')(sequelize, DataTypes)
 // Sync database with force: false and alter: false to avoid enum conflicts
 const syncDatabase = async () => {
     try {
@@ -240,8 +222,8 @@ db.users.hasMany(db.user_attributes, {
 //     as: 'orders'
 // })
 
-// db.roles.belongsToMany(db.scopes, { through: 'role_scopes', foreignKey: 'role_id' });
-// db.scopes.belongsToMany(db.roles, { through: 'role_scopes', foreignKey: 'scope_id' });
+db.roles.belongsToMany(db.scopes, { through: 'role_scopes', foreignKey: 'role_id' });
+db.scopes.belongsToMany(db.roles, { through: 'role_scopes', foreignKey: 'scope_id' });
 
 // db.users.hasOne(db.wallets, {
 //     foreignKey: 'user_id',

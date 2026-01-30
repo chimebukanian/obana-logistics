@@ -60,7 +60,7 @@ const router = Router();
  *       401:
  *          description: Request aunthenticated failed
 */
-router.post('/otp/withdraw', auth.authenticateToken, verificationController.verifyOTP);
+
 
 router.post('/otp', verificationController.verifyOTP)
 router.get('/otp', verificationController.getOtp)

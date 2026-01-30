@@ -1623,7 +1623,8 @@ class WeebHooksHelper {
         if (!user) return this.res.status(200).send()
         const wallet = await db.wallets.findOne({ where: { user_id: user.id } })
         if (!wallet) return this.res.status(200).send()
-        const response = await this.updateSalesPersonZohoProfile(wallet, user.sales_person_id)
+        const salesPersonId = user.sales_person_id ?? user?.attributes?.sales_person_id
+        const response = await this.updateSalesPersonZohoProfile(wallet, salesPersonId)
         this.log.response = JSON.stringify(response)
         await this.log.save()
         return this.res.status(200).send(response)

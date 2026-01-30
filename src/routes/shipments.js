@@ -20,7 +20,7 @@ const controller =  shipmentController
 
     router.post('/cancel/:shipment_id', controller.cancelShipment);
     
-router.get('', controller.getAllShipments);
+    router.get('', controller.getAllShipments);
     
     
 module.exports = router;

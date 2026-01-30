@@ -1,7 +1,6 @@
 const { Router } = require('express');
-const userController = require('../controllers/userController')
-const auth = require('../routes/auth')
-const Utils = require('../../utils')
+const userController = require('../controllers/userController');
+const auth = require('../routes/auth');
 const router = Router();
 
 /**
@@ -11,27 +10,32 @@ const router = Router();
  *     signup_details:
  *       type: object
  *       required:
- *          - username
+ *          - email
+ *          - phone
  *          - password
+ *          - role
  *       properties:
  *         email:
  *           type: string
- *           description: The email address of the useruser
+ *           description: The email address of the user
  *         phone:
  *           type: string
  *           description: The phone number of the user
  *         password:
  *           type: string
- *           description: The new password of the user
- *         attributes:
- *           type: object
- *           description: Holds the user's attributes
+ *           description: The password of the user
+ *         role:
+ *           type: string
+ *           enum: [admin, driver, customer]
+ *           description: User role
+ *         driver_id:
+ *           type: integer
+ *           description: Driver ID (only required if role is driver)
  *       example:
- *         email: elvisonyedika@gmail.com
+ *         email: user@example.com
  *         phone: '08160581957'
  *         password: Password@1
- *         attributes:
- *             category_slug: fasion
+ *         role: customer
  * 
  *     reset_password_details:
  *       type: object
@@ -130,7 +134,7 @@ const router = Router();
 *               items:
 *                 $ref: '#/components/schemas/signup_details'
 */
-router.post('/signup', userController.createUserRequest)
+router.post('/signup', userController.signup)
 
 
 /**
@@ -155,8 +159,7 @@ router.post('/signup', userController.createUserRequest)
 *               items:
 *                 $ref: '#/components/schemas/reset_password_details'
  */
-router.post('/reset-password', userController.resetPasswordRequest)
-router.post('/change-password', auth.authenticateToken, userController.resetPassword)
+// Password reset endpoints removed in simplified auth. Keep minimal endpoints below.
 
 
 /**
@@ -183,7 +186,7 @@ router.post('/change-password', auth.authenticateToken, userController.resetPass
  *       401:
  *          description: Login failed
 */
-router.post('/login', userController.loginRequest)
+router.post('/login', userController.signin)
 
 /**
  * @swagger
@@ -211,7 +214,7 @@ router.post('/login', userController.loginRequest)
  *       403:
  *          description: Access Denied
 */
-router.post('/token', userController.token)
+router.post('/token', userController.signin)
 
 /**
  * @swagger
@@ -244,7 +247,7 @@ router.post('/token', userController.token)
  *       401:
  *          description: Login failed
 */
-router.post('/update_profile', auth.authenticateToken, userController.updateProfile)
+router.get('/profile', auth.authenticateToken, userController.updateProfile)
 
 /**
  * @swagger
@@ -270,21 +273,10 @@ router.post('/update_profile', auth.authenticateToken, userController.updateProf
  *       403:
  *          description: Access Denied
 */
-router.delete('/logout', userController.logout)
+router.delete('/logout', auth.authenticateToken, userController.logout)
 
-router.post('/role', auth.authenticateToken, Utils.scopeMiddleware('create_role'), userController.createRole)
-router.post('/scope', auth.authenticateToken, Utils.scopeMiddleware('create_scope'), userController.createScope)
-router.post('/asign-scope', auth.authenticateToken, Utils.scopeMiddleware('asign_scope'), userController.asignScope,)
-router.put('/unasign-scope', auth.authenticateToken, Utils.scopeMiddleware('unasign_scope'), userController.unasignScopes)
-router.get('/roles', userController.getRoles)
-router.get('/scopes', userController.getScope)
-router.post('/asign-role', auth.authenticateToken, Utils.scopeMiddleware('asign_role'), userController.asignRole)
-router.put('/unasign-role', auth.authenticateToken, Utils.scopeMiddleware('asign_role'), userController.unasignRole)
+module.exports = router;
 
-router.post('/asign-acount', auth.authenticateToken, Utils.scopeMiddleware('asign_acount'), userController.asignAccountType)
-router.get('/list', auth.authenticateToken, userController.getUsersList)
-router.post('/add', auth.authenticateToken, Utils.scopeMiddleware('add_user'), userController.addAdminUser)
-
-router.post('/withdraw', auth.authenticateToken, userController.withdrawRequest)
+// Other user-management endpoints removed for simplicity
 
 module.exports = router;
