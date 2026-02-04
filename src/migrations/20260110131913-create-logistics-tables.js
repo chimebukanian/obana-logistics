@@ -43,7 +43,7 @@ module.exports = {
         allowNull: false
       },
       country: {
-        type: Sequelize.STRING(2),
+        type: Sequelize.STRING(100),
         allowNull: false
       },
       zip_code: {

@@ -214,7 +214,7 @@ router.post('/login', userController.signin)
  *       403:
  *          description: Access Denied
 */
-router.post('/token', userController.signin)
+router.post('/token', userController.token)
 
 /**
  * @swagger
@@ -275,8 +275,12 @@ router.get('/profile', auth.authenticateToken, userController.updateProfile)
 */
 router.delete('/logout', auth.authenticateToken, userController.logout)
 
-module.exports = router;
+// Admin User Management Routes
+router.get('/', auth.authenticateToken, auth.verifyRole(['admin']), userController.getUsers);
+router.post('/', auth.authenticateToken, auth.verifyRole(['admin']), userController.createUserByAdmin);
+router.put('/:id', auth.authenticateToken, auth.verifyRole(['admin']), userController.updateUserByAdmin);
+router.delete('/:id', auth.authenticateToken, auth.verifyRole(['admin']), userController.deleteUserByAdmin);
 
-// Other user-management endpoints removed for simplicity
+module.exports = router;
 
 module.exports = router;

@@ -6,9 +6,17 @@ const nodemailer = require('../mailer/nodemailer'); // hypothetical email module
 const validateShipmentPayload = (payload) => {
     const errors = [];
 
-    if (!payload.customer_id) {
-        errors.push('customer_id is required');
+    if (!payload.pickup_address) {
+        errors.push('pickup_address is required');
+    } else {
+        const addr = payload.pickup_address;
+        if (!addr.line1) errors.push('pickup_address.line1 is required');
+        if (!addr.city) errors.push('pickup_address.city is required');
+        if (!addr.state) errors.push('pickup_address.state is required');
+        if (!addr.country) errors.push('pickup_address.country is required');
+        if (!addr.phone) errors.push('pickup_address.phone is required');
     }
+
     if (!payload.delivery_address) {
         errors.push('delivery_address is required');
     } else {
@@ -247,13 +255,73 @@ const sendStatusUpdateEmail = async (shipment, status, trackingEvent) => {
 // Controller object
 const shipmentController = {
     /**
+     * Get admin dashboard statistics
+     */
+    getAdminStats: async (req, res) => {
+        try {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const [
+                totalRoutes,
+                activeDrivers,
+                pendingShipments,
+                revenueResult,
+                recentActivity
+            ] = await Promise.all([
+                db.route_templates.count(),
+                db.drivers.count({ where: { status: 'active' } }),
+                db.shippings.count({ where: { status: 'pending' } }),
+                db.shippings.sum('shipping_fee', {
+                    where: {
+                        createdAt: { [Op.gte]: startOfMonth },
+                        status: { [Op.notIn]: ['cancelled', 'failed'] }
+                    }
+                }),
+                db.shipment_tracking.findAll({
+                    limit: 5,
+                    order: [['createdAt', 'DESC']],
+                    include: [{
+                        model: db.shippings,
+                        as: 'shipment',
+                        attributes: ['shipment_reference', 'user_id']
+                    }]
+                })
+            ]);
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    totalRoutes,
+                    activeDrivers,
+                    pendingShipments,
+                    revenue: revenueResult || 0,
+                    recentActivity
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching admin stats:', error);
+            return res.status(500).json({ success: false, message: 'Error fetching stats' });
+        }
+    },
+
+    /**
      * Main endpoint to create shipments
      * Handles both internal and external shipments
      */
     createShipment: async (req, res) => {
         try {
+            // Check if user is authenticated
+            if (!req.user || !req.user.id) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Authentication required - user not found in request'
+                });
+            }
+
             const payload = req.body;
-            
+        
             // Validate payload
             const validation = validateShipmentPayload(payload);
             if (!validation.valid) {
@@ -263,7 +331,8 @@ const shipmentController = {
                     errors: validation.errors
                 });
             }
-
+            let user = req.user;
+            console.log("user info from auth middleware:", user.id);
             const transaction = await db.sequelize.transaction();
             
             try {
@@ -284,59 +353,22 @@ const shipmentController = {
                     metadata: payload.delivery_address.metadata || {}
                 }, { transaction });
 
-                // 2. Create pickup address - handle different payload structures
-                let pickupAddressData = {};
-                
-                // Check if pickup_address exists in payload
-                if (payload.pickup_address) {
-                    pickupAddressData = {
-                        address_type: 'pickup',
-                        name: payload.vendor_name || payload.pickup_address.contact_name || 'Vendor',
-                        phone: payload.pickup_address.phone || payload.delivery_address.phone,
-                        contact_email: payload.pickup_address.email || '',
-                        line1: payload.pickup_address.line1,
-                        line2: payload.pickup_address.line2 || '',
-                        city: payload.pickup_address.city,
-                        state: payload.pickup_address.state,
-                        country: payload.pickup_address.country,
-                        zip_code: payload.pickup_address.zip || '',
-                        is_residential: false,
-                        instructions: payload.pickup_address.instructions || '',
-                        metadata: payload.pickup_address.metadata || {}
-                    };
-                } else if (payload.dispatcher?.metadata?.address_payload?.pickup_address) {
-                    
-                    const pickupAddr = payload.dispatcher.metadata.address_payload.pickup_address;
-                    pickupAddressData = {
-                        address_type: 'pickup',
-                        name: payload.vendor_name || 'Vendor',
-                        phone: payload.delivery_address.phone,
-                        contact_email: '',
-                        line1: pickupAddr.line1 || 'Vendor Warehouse',
-                        line2: '',
-                        city: pickupAddr.city,
-                        state: pickupAddr.state,
-                        country: pickupAddr.country,
-                        zip_code: pickupAddr.zip || '',
-                        is_residential: false,
-                        instructions: '',
-                        metadata: { source: 'dispatcher_metadata' }
-                    };
-                } else {
-                    
-                    pickupAddressData = {
-                        address_type: 'pickup',
-                        name: payload.vendor_name || 'Vendor',
-                        phone: payload.delivery_address.phone,
-                        contact_email: '',
-                        line1: 'Vendor Warehouse',
-                        city: payload.delivery_address.city, 
-                        state: payload.delivery_address.state,
-                        country: payload.delivery_address.country,
-                        is_residential: false,
-                        instructions: ''
-                    };
-                }
+                // 2. Create pickup address - from user form
+                const pickupAddressData = {
+                    address_type: 'pickup',
+                    name: payload.pickup_address.contact_name || 'Vendor',
+                    phone: payload.pickup_address.phone,
+                    contact_email: payload.pickup_address.email || '',
+                    line1: payload.pickup_address.line1,
+                    line2: payload.pickup_address.line2 || '',
+                    city: payload.pickup_address.city,
+                    state: payload.pickup_address.state,
+                    country: payload.pickup_address.country,
+                    zip_code: payload.pickup_address.zip_code || '',
+                    is_residential: payload.pickup_address.is_residential || false,
+                    instructions: payload.pickup_address.instructions || '',
+                    metadata: payload.pickup_address.metadata || {}
+                };
 
                 const pickupAddress = await db.addresses.create(pickupAddressData, { transaction });
 
@@ -352,9 +384,9 @@ const shipmentController = {
 
                 // 6. Create shipment
                 const shipment = await db.shippings.create({
+                    user_id: user.id,
                     shipment_reference: shipmentReference,
                     order_reference: payload.order_id || `ORDER-${Date.now()}`,
-                    user_id: payload.user_id,
                     vendor_name: payload.vendor_name || 'Unknown Vendor',
                     carrier_type: isInternal ? 'internal' : 'external',
                     carrier_name: isInternal ? 'Obana Logistics' : (payload.dispatcher?.carrier_name || 'External Carrier'),
@@ -421,9 +453,11 @@ const shipmentController = {
                 // 7. Create shipment items
                 if (payload.items && Array.isArray(payload.items) && payload.items.length > 0) {
                     await db.shipment_items.bulkCreate(
-                        payload.items.map(item => ({
+                        payload.items.map((item, index) => {
+                            const itemNumber = String(index + 1).padStart(3, '0');
+                            return {
                             shipment_id: shipment.id,
-                            item_id: item.item_id,
+                            item_id: `ITEM-${itemNumber}`,
                             name: item.name,
                             description: item.description || '',
                             quantity: parseInt(item.quantity) || 1,
@@ -433,7 +467,7 @@ const shipmentController = {
                             dimensions: item.dimensions || null,
                             currency: item.currency || 'NGN',
                             metadata: { original_item: item }
-                        })),
+                        }}),
                         { transaction }
                     );
                 }
@@ -705,10 +739,11 @@ getAllShipments: async (req, res) => {
      */
     getShipment: async (req, res) => {
         try {
-            const { shipment_reference } = req.params;
+        const { shipment_reference } = req.params;
+            const { user_id } = req.body;
             
             const shipment = await db.shippings.findOne({
-                where: { shipment_reference },
+                where: { shipment_reference, user_id },
                 include: [
                     { 
                         model: db.addresses, 
@@ -915,7 +950,7 @@ getAllShipments: async (req, res) => {
                 limit: parseInt(limit),
                 offset: offset
             });
-
+            console.log(`Fetched ${shipments.rows.length} shipments for user ${user_id} (total: ${shipments.count})`);
             return res.status(200).json({
                 success: true,
                 data: {

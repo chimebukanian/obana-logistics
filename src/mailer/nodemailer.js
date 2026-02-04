@@ -65,8 +65,9 @@ const sendMail = async (payload) => {
       ...(typeof content === 'object' ? content : { message: content })
     }
   }
-  console.log('Sending email to:', email, 'using template:', template ? template : 'plain text')
+  
   try {
+    
     let info = await transporter.sendMail(templateMailOption);
 
     console.log("Message sent: %s", info.messageId);

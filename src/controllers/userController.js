@@ -99,7 +99,7 @@ const createUserAfterOtpVerification = async (payload, req, res) => {
         })
 
         let driver_id = driverObj.id
-        await createUserAttributes(user.id, { first_name, last_name, role, driver_id})     
+        await createUserAttributes(user.id, { first_name, last_name, role, driver_id})    
     }
     
     // Create user attributes
@@ -327,8 +327,36 @@ const updateProfile = async (req, res) => {
     user = await getUser(user.email, user.phone, true, req, res)
     const payload = utils.flattenObj(user)
 
-    // Update local attributes and return updated auth details
-    const userAuthPayload = utils.flattenObj(user)
+    req.body = payload
+    req.body.return = 1
+    req.params = { tenant: 'zoho', endpoint: 'update-customer' }
+    req.query.contact_id = user.attributes.zoho_id
+    if (
+        req.body.category_of_interest &&
+        Array.isArray(req.body.category_of_interest)
+    ) {
+        req.body.category_of_interest = req.body.category_of_interest
+            .map((item) => item.value)
+            .join(",");
+    }
+    if (
+        req.body.brand_of_interest &&
+        Array.isArray(req.body.brand_of_interest)
+    ) {
+        req.body.brand_of_interest = req.body.brand_of_interest
+            .map((item) => item.value)
+            .join(",");
+    }
+
+    if (user.attributes.zoho_id)
+        await requestController.makeRequest(req, res)
+
+    if (payload?.account_types && ['agent'].includes(payload?.account_types)) {
+        await updaeteSalesPerson(payload, req, res)
+
+        if (payload?.bank_name && payload?.account_name)
+            await updateSalesPersonPerymentInfo(payload, req, res)
+    }
     let userAuth = await createAuthDetail(user, true)
     return res.status(203).send(
         utils.responseSuccess(userAuth)
@@ -383,14 +411,12 @@ const getUser = async (email = null, phone = null, withAttr = false, req = null,
         delete user.password
         user.attributes = await getUserAttributes(user.id)
         const attributes = utils.flattenObj(user.attributes)
-
-        // Ensure a sensible default for account types
-        if (!attributes.hasOwnProperty('account_types')) {
-            user.attributes.account_types = 'customer'
-            await createUserAttributes(user.id, { account_types: user.attributes.account_types })
-        }
-
-        // Determine role from attributes (supports either `role` string or `role_id`)
+        
+        // if (!attributes.hasOwnProperty('account_types')) {
+        //     user.attributes.account_types = 'customer'
+        //     await createUserAttributes(user.id, { account_types: user.attributes.account_types })
+        // }
+        
         const roleVal = attributes.role || attributes.role_id
         if (roleVal) {
             if (!isNaN(Number(roleVal))) {
@@ -411,6 +437,120 @@ const getUser = async (email = null, phone = null, withAttr = false, req = null,
     return user
 }
 
+/**
+ * Get users with optional role filter
+ */
+const getUsers = async (req, res) => {
+    try {
+        const { role } = req.query;
+        let users;
+
+        if (role === 'driver') {
+            users = await Drivers.findAll({
+                include: [{
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'email', 'phone', 'createdAt']
+                }]
+            });
+        } else {
+            // Default user fetch logic if needed
+            users = await User.findAll();
+        }
+
+        return res.status(200).send(utils.responseSuccess(users));
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return res.status(500).send(utils.responseError(error.message));
+    }
+}
+
+/**
+ * Create user by admin (skips OTP)
+ */
+const createUserByAdmin = async (req, res) => {
+    try {
+        const { email, phone, password, first_name, last_name, role, account_type, vehicle_type, vehicle_registration } = req.body;
+        const userRole = role || account_type || 'customer';
+
+        let user = await User.findOne({ where: { email } });
+        if (user) return res.status(400).send(utils.responseError('User already exists'));
+
+        const hashedPassword = await hashPassword(password || '123456'); // Default password
+
+        user = await User.create({ email, phone, password: hashedPassword });
+
+        await createUserAttributes(user.id, { first_name, last_name, role: userRole });
+
+        if (userRole === 'driver') {
+            await Drivers.create({
+                driver_code: `OBANA-DRV-${String(user.id).padStart(3, '0')}`,
+                user_id: user.id,
+                vehicle_type: vehicle_type || 'bike',
+                vehicle_registration: vehicle_registration,
+                status: 'active',
+                total_deliveries: 0,
+                successful_deliveries: 0,
+                metadata: { phone, email, first_name, last_name, rating: 5.0 }
+            });
+        }
+
+        return res.status(201).send(utils.responseSuccess(user));
+    } catch (error) {
+        console.error('Error creating user:', error);
+        return res.status(500).send(utils.responseError(error.message));
+    }
+}
+
+/**
+ * Update user by admin
+ */
+const updateUserByAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { first_name, last_name, phone, vehicle_type, vehicle_registration, status } = req.body;
+
+        const user = await User.findByPk(id);
+        if (!user) return res.status(404).send(utils.responseError('User not found'));
+
+        if (phone) {
+            user.phone = phone;
+            await user.save();
+        }
+
+        await createUserAttributes(user.id, { first_name, last_name });
+
+        const driver = await Drivers.findOne({ where: { user_id: id } });
+        if (driver) {
+            if (vehicle_type) driver.vehicle_type = vehicle_type;
+            if (vehicle_registration) driver.vehicle_registration = vehicle_registration;
+            if (status) driver.status = status;
+            
+            const metadata = driver.metadata || {};
+            if (first_name) metadata.first_name = first_name;
+            if (last_name) metadata.last_name = last_name;
+            if (phone) metadata.phone = phone;
+            driver.metadata = metadata;
+            
+            await driver.save();
+        }
+
+        return res.status(200).send(utils.responseSuccess(user));
+    } catch (error) {
+        return res.status(500).send(utils.responseError(error.message));
+    }
+}
+
+const deleteUserByAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Drivers.destroy({ where: { user_id: id } });
+        await User.destroy({ where: { id } });
+        return res.status(200).send(utils.responseSuccess('User deleted'));
+    } catch (error) {
+        return res.status(500).send(utils.responseError(error.message));
+    }
+}
 
 
 
@@ -492,8 +632,6 @@ const createVerificationRequest = async (body, res = null, callback = null) => {
     const data = await prepareVerificationData(body, callback)
     try {
         const verification = await Verifications.create(data)
-        
-        console.log(verification)
         nodemailer.sendMail({ email: data.email, content: { otp: 'OTP: ' + data.otp, user: data.email }, subject: 'One Time Password', template: 'otp' })
         if (res) {
             return res.status(200).send(
@@ -824,6 +962,9 @@ module.exports = {
     unasignRole,
     resetPassword,
     createAuthDetail,
-    withdrawRequest
+    withdrawRequest,
+    getUsers,
+    createUserByAdmin,
+    updateUserByAdmin,
+    deleteUserByAdmin
 }
-

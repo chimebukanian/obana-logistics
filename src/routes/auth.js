@@ -249,6 +249,12 @@ const authenticateToken = async (req, res, next) => {
   if (token) {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, user) => {
       if (error) {
+        console.error('JWT Verification Error:', {
+          message: error.message,
+          name: error.name,
+          secret_set: !!process.env.ACCESS_TOKEN_SECRET,
+          secret_length: process.env.ACCESS_TOKEN_SECRET?.length
+        })
         return res.status(403).send(
           utils.responseError('Access denied')
         )
@@ -278,8 +284,25 @@ const authenticateToken = async (req, res, next) => {
   }
 }
 
+const verifyRole = allowedRoles => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized access' });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    next();
+  };
+};
+
+
+
 module.exports = {
   authenticateToken,
+  verifyRole,
   router
 }
 

@@ -23,9 +23,30 @@ const verifyOTP = async (req, res) => {
     if (!record)
         return res.status(401).send(utils.responseError('Invalide OTP'))
     try {
-        const response = await executeCallBack(JSON.parse(record.call_back), req, res, record)
-        record.used = 1
-        record.save()
+        // Execute the callback safely — catch any errors coming from downstream
+        let response
+        try {
+            response = await executeCallBack(JSON.parse(record.call_back), req, res, record)
+        } catch (cbErr) {
+            console.error('Callback execution error:', cbErr)
+            // Mark record as used to avoid replay attacks even if callback failed
+            try {
+                record.used = 1
+                await record.save()
+            } catch (saveErr) {
+                console.error('Failed to mark verification record as used:', saveErr)
+            }
+            return res.status(500).send(utils.responseError(cbErr.message || 'Callback execution failed'))
+        }
+
+        // mark verification as used and respond
+        try {
+            record.used = 1
+            await record.save()
+        } catch (saveErr) {
+            console.error('Failed to mark verification record as used:', saveErr)
+        }
+
         return res.status(200).send(utils.responseSuccess(response))
     } catch (error) {
         return res.status(500).send(utils.responseError(error.message))
@@ -42,15 +63,21 @@ const executeCallBack = async (request_details, req, res, record) => {
     delete req.body.request_id
     delete req.body.otp
     const payload = { ...request_details.payload, ...req.body }
-    if (request_details.method == 'loginAfterOtpVerification') {
-        delete payload.password
-        response = await userController.loginAfterOtpVerification(payload, req, res)
-    } else if (request_details.method == 'createUserAfterOtpVerification') {
-        response = await userController.createUserAfterOtpVerification(payload, req, res)
-    }  else {
-        response = await userController.resetPasswordAfterOtpVerification(payload, req, res)
+    try {
+        if (request_details.method == 'loginAfterOtpVerification') {
+            delete payload.password
+            response = await userController.loginAfterOtpVerification(payload, req, res)
+        } else if (request_details.method == 'createUserAfterOtpVerification') {
+            response = await userController.createUserAfterOtpVerification(payload, req, res)
+        } else {
+            response = await userController.resetPasswordAfterOtpVerification(payload, req, res)
+        }
+        return response
+    } catch (err) {
+        // Catch any downstream errors (e.g., nodemailer/network) and return structured error
+        console.error('executeCallBack caught error:', err)
+        throw err
     }
-    return response
 }
 
 const getOtp = async (req, res) => {
