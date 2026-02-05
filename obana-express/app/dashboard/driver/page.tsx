@@ -1,38 +1,42 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
+"use client";
 import { Card, Button, Badge, Loader } from '@/components/ui';
 import { apiClient } from '@/lib/api';
 import { TrendingUp, Package, MapPin, Clock } from 'lucide-react';
-
+import { useAuth } from '@/lib/authContext';
+import { useEffect, useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 interface Shipment {
-  id: string;
-  origin: string;
-  destination: string;
-  weight: number;
+  id: number;
+  shipment_reference: string;
+  pickup_address: { city: string; state: string };
+  delivery_address: { city: string; state: string; line1: string };
+  total_weight: string;
   status: string;
-  delivery_address: string;
-  estimated_delivery: string;
+  metadata: any;
 }
 
 export default function DriverDashboard() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, completed: 0, earnings: 0 });
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadShipments();
-  }, []);
+    if (user?.id) {
+      loadShipments();
+    }
+  }, [user]);
 
   const loadShipments = async () => {
     try {
-      const response = await apiClient.listShipments({ role: 'driver', limit: 10 });
-      setShipments(response.data?.data || []);
+      if (!user?.id) return;
+      const response = await apiClient.listShipments(Number(user.id), { role: 'driver', limit: 10 });
+      const data = response.data?.shipments || [];
+      setShipments(data);
       
-      // Calculate stats
-      const active = response.data?.data?.filter((s: any) => s.status !== 'Delivered').length || 0;
-      const completed = response.data?.data?.filter((s: any) => s.status === 'Delivered').length || 0;
+      // Calculate stats      
+      const active = data.filter((s: any) => s.status !== 'delivered').length || 0;
+      const completed = data.filter((s: any) => s.status === 'delivered').length || 0;
       
       setStats({
         active,
@@ -96,15 +100,15 @@ export default function DriverDashboard() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">
-                        {shipment.origin} → {shipment.destination}
+                        {shipment.pickup_address?.city} → {shipment.delivery_address?.city}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">{shipment.delivery_address}</p>
+                      <p className="text-sm text-gray-600 mt-1">{shipment.delivery_address?.line1}</p>
                     </div>
                     <Badge
                       variant={
-                        shipment.status === 'Delivered'
+                        shipment.status === 'delivered'
                           ? 'success'
-                          : shipment.status === 'In Transit'
+                        : shipment.status === 'in_transit'
                           ? 'info'
                           : 'warning'
                       }
@@ -116,11 +120,11 @@ export default function DriverDashboard() {
                   <div className="grid grid-cols-3 gap-4 pt-3 border-t border-gray-100">
                     <div>
                       <p className="text-xs text-gray-600">Weight</p>
-                      <p className="font-medium text-gray-900">{shipment.weight} kg</p>
+                      <p className="font-medium text-gray-900">{shipment.total_weight} kg</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Est. Delivery</p>
-                      <p className="font-medium text-gray-900">{shipment.estimated_delivery}</p>
+                      <p className="font-medium text-gray-900">{shipment.metadata?.carrier_details?.delivery_eta || 'N/A'}</p>
                     </div>
                     <div className="text-right">
                       <Button

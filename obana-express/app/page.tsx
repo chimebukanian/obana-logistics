@@ -8,21 +8,8 @@ import { Button } from '@/components/ui';
 import { ArrowRight, Zap, Shield, Smartphone } from 'lucide-react';
 
 export default function Home() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      // Redirect to appropriate dashboard based on role
-      const dashboards: Record<string, string> = {
-        customer: '/dashboard/customer',
-        driver: '/dashboard/driver',
-        admin: '/dashboard/admin',
-        agent: '/dashboard/agent',
-      };
-      router.push(dashboards[user.role] || '/');
-    }
-  }, [isAuthenticated, isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -35,6 +22,17 @@ export default function Home() {
     );
   }
 
+  const getDashboardLink = () => {
+    if (!user) return '/';
+    const dashboards: Record<string, string> = {
+      customer: '/dashboard/customer',
+      driver: '/dashboard/driver',
+      admin: '/dashboard/admin',
+      agent: '/dashboard/agent',
+    };
+    return dashboards[user.role] || '/dashboard/customer';
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-600 via-blue-400 to-blue-300">
       {/* Navigation */}
@@ -42,12 +40,23 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-blue-600">Obana</h1>
           <div className="space-x-4">
-            <Link href="/auth/login">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link href="/auth/signup">
-              <Button variant="primary">Sign Up</Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link href={getDashboardLink()}>
+                  <Button variant="primary">Dashboard</Button>
+                </Link>
+                <Button variant="ghost" onClick={() => logout()}>Logout</Button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="ghost">Sign In</Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button variant="primary">Sign Up</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

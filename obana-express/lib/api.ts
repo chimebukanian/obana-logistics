@@ -69,6 +69,8 @@ class ApiClient {
               this.accessToken = access_token;
               localStorage.setItem('access_token', access_token);
               this.client.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+              console.log("Tooken", access_token);
+              console.log('Token refreshed successfully', this.client.defaults.headers.common['Authorization']);
               return this.client(originalRequest);
             }
           } catch (refreshError) {
@@ -187,6 +189,11 @@ class ApiClient {
   // Shipments endpoints
   async createShipment(data: any) {
     const response = await this.client.post<ApiResponse>('/shipments', data);
+    return response.data;
+  }
+
+  async getAllShipments(filters?: any) {
+    const response = await this.client.get<ApiResponse>('/shipments', { params: filters });
     return response.data;
   }
 

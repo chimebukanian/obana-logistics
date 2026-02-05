@@ -55,9 +55,9 @@ export default function CreateShipmentPage() {
   ];
 
   const serviceLevels = [
-    { value: 'Standard', label: 'Standard (2-3 days)' },
-    { value: 'Express', label: 'Express (24 hours)' },
-    { value: 'Economy', label: 'International Express' },
+    { value: 'Standard', label: 'Standard' },
+    { value: 'Express', label: 'Express' },
+    { value: 'Economy', label: 'Express' },
   ];
 
   const resetForm = () => {
