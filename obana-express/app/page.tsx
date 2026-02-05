@@ -129,77 +129,7 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Testing Links Section */}
-        <div className="bg-white rounded-lg p-12 shadow-2xl mt-20">
-          <h3 className="text-2xl font-bold text-gray-900 mb-8">🧪 Testing Links</h3>
-          
-          {/* Auth Pages */}
-          <div className="mb-8">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Authentication</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <Link href="/auth/signup">
-                <Button variant="secondary" fullWidth>Sign Up</Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button variant="secondary" fullWidth>Login</Button>
-              </Link>
-              <Link href="/auth/otp">
-                <Button variant="secondary" fullWidth>OTP Verification</Button>
-              </Link>
-            </div>
-          </div>
 
-          {/* Customer Dashboard */}
-          <div className="mb-8">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Customer Dashboard</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <Link href="/dashboard/customer">
-                <Button variant="secondary" fullWidth>Overview</Button>
-              </Link>
-              <Link href="/dashboard/customer/shipments/new">
-                <Button variant="secondary" fullWidth>Create Shipment</Button>
-              </Link>
-              <Link href="/dashboard/customer/shipments">
-                <Button variant="secondary" fullWidth>My Shipments</Button>
-              </Link>
-              <Link href="/dashboard/customer/profile">
-                <Button variant="secondary" fullWidth>Profile</Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Admin Dashboard */}
-          <div className="mb-8">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Admin Dashboard</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <Link href="/dashboard/admin">
-                <Button variant="secondary" fullWidth>Overview</Button>
-              </Link>
-              <Link href="/dashboard/admin/routes">
-                <Button variant="secondary" fullWidth>Route Templates</Button>
-              </Link>
-              <Link href="/dashboard/admin/drivers">
-                <Button variant="secondary" fullWidth>Drivers</Button>
-              </Link>
-              <Link href="/dashboard/admin/shipments">
-                <Button variant="secondary" fullWidth>Shipments</Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Driver & Agent Dashboards */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Other Dashboards</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <Link href="/dashboard/driver">
-                <Button variant="secondary" fullWidth>Driver Dashboard</Button>
-              </Link>
-              <Link href="/dashboard/agent">
-                <Button variant="secondary" fullWidth>Agent Dashboard</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Footer */}
