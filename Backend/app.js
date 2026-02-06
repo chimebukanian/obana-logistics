@@ -28,7 +28,10 @@ const io = socketIo(server, {
         "https://obana-logistics-psi.vercel.app/"
 		
     ],
-    methods: ["GET", "POST"]
+    // methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["*"],
+    allowedHeaders: ["*"],
+    credentials: true
   }
 });
 
