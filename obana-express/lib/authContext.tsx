@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  signup: (email: string, phone: string, password: string, role: string) => Promise<any>;
+  signup: (first_name: string, last_name: string, email: string, phone: string, password: string, role: string) => Promise<any>;
   login: (userIdentification: string, password: string, rememberMe?: boolean) => Promise<any>;
   verifyOtp: (requestId: string, otp: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -24,10 +24,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     store.hydrate();
   }, []);
 
-  const signup = async (email: string, phone: string, password: string, role: string) => {
+  const signup = async (first_name:string, last_name: string, email: string, phone: string, password: string, role: string) => {
     try {
       setError(null);
-      const response = await apiClient.signup(email, phone, password, role);
+      const response = await apiClient.signup(first_name, last_name, email, phone, password, role);
       return response.data;
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Signup failed';

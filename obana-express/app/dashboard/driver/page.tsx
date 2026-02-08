@@ -198,9 +198,10 @@ export default function DriverDashboard() {
                   value={updateForm.status}
                   onChange={(e) => setUpdateForm({ ...updateForm, status: e.target.value })}
                   options={[
+                    { value: 'pending', label: 'Pending' },
                     { value: 'delivered', label: 'Delivered' },
                     { value: 'in_transit', label: 'In Transit' },
-                    { value: ' cancelled', label: 'Delivered' },
+                    { value: 'cancelled', label: 'Cancelled' },
                     { value: 'returned', label: 'Returned' },
                   ]}
                 />

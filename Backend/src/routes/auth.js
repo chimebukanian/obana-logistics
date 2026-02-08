@@ -249,12 +249,7 @@ const authenticateToken = async (req, res, next) => {
   if (token) {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, user) => {
       if (error) {
-        console.error('JWT Verification Error:', {
-          message: error.message,
-          name: error.name,
-          secret_set: !!process.env.ACCESS_TOKEN_SECRET,
-          secret_length: process.env.ACCESS_TOKEN_SECRET?.length
-        })
+
         return res.status(403).send(
           utils.responseError('Access denied')
         )

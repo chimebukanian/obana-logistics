@@ -137,8 +137,11 @@ export default function AdminDashboard() {
               statsData.recentActivity.map((activity, i) => (
                 <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                   <div>
-                    <p className="font-medium text-gray-900 capitalize">{activity.description || activity.status?.replace('_', ' ')}</p>
-                    <p className="text-sm text-gray-600">{activity.performed_by || 'System'} {activity.shipment ? `• ${activity.shipment.shipment_reference}` : ''}</p>
+                    <p className="font-medium text-gray-900 capitalize">{activity.description}</p>
+                    <p className="text-sm text-gray-600">
+                      {activity.performed_by || 'System'} 
+                      {activity.reference ? ` • ${activity.reference}` : ''}
+                    </p>
                   </div>
                   <p className="text-sm text-gray-500">{formatTimeAgo(activity.createdAt)}</p>
                 </div>

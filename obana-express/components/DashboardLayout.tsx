@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { useRouter } from 'next/navigation';
-import { Menu, X, LogOut, Home, Settings } from 'lucide-react';
+import { Menu, X, LogOut, Home, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/authStore';
 
@@ -30,6 +30,7 @@ const navigationByRole = {
   admin: [
     { name: 'Dashboard', href: '/dashboard/admin', icon: Home },
     { name: 'Route Templates', href: '/dashboard/admin/routes', icon: Home },
+    { name: 'Users', href: '/dashboard/admin/users', icon: Users },
     { name: 'Drivers', href: '/dashboard/admin/drivers', icon: Home },
     { name: 'Shipments', href: '/dashboard/admin/shipments', icon: Home },
     { name: 'Analytics', href: '/dashboard/admin/analytics', icon: Home },

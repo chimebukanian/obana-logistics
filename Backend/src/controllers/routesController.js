@@ -47,16 +47,26 @@ const matchTemplate = async (req, res) => {
     if (!origin_city || !destination_city || !transport_mode || !service_level || typeof weight === 'undefined')
         return res.status(400).send(utils.responseError('Missing required parameters'))
 
-    const templates = await RouteTemplates.findAll({
-        where: {
-            origin_city: origin_city,
-            destination_city: destination_city,
-            transport_mode: transport_mode,
-            service_level: service_level
-        }
-    })
+    // const templates = await RouteTemplates.findAll({
+    //     where: {
+    //         origin_city: origin_city,
+    //         destination_city: destination_city,
+    //         transport_mode: transport_mode,
+    //         service_level: service_level
+    //     }
+    // })
+    // rather, the above should normalizze both the db values and the req body values to same letter casing first so comparison can work , implement the fix below:
+    const templates = await RouteTemplates.findAll()
+    const filteredTemplates = templates.filter(t => 
+        t.origin_city.toLowerCase() === origin_city.toLowerCase() &&
+        t.destination_city.toLowerCase() === destination_city.toLowerCase() &&
+        t.transport_mode.toLowerCase() === transport_mode.toLowerCase() &&
+        t.service_level.toLowerCase() === service_level.toLowerCase()
+    )
+    
 
-    for (const t of templates) {
+
+    for (const t of filteredTemplates) {
         const brackets = t.weight_brackets || []
         for (const b of brackets) {
             const min = Number(b.min || 0)

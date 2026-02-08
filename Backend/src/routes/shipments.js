@@ -23,6 +23,7 @@ const controller =  shipmentController
     
     router.get('/admin/stats', auth.authenticateToken, auth.verifyRole(['admin']), controller.getAdminStats);
     router.get('', auth.authenticateToken, auth.verifyRole(['admin']), controller.getAllShipments);
+    router.delete('/:shipment_id', auth.authenticateToken, auth.verifyRole(['admin']), controller.deleteShipment);
     
     
 module.exports = router;

@@ -221,16 +221,7 @@ const resetPassword = async (req, res) => {
     }
 }
 
-/*
- Method for withdraw
-  * @param {*} req 
- * @param {*} res 
- * @returns 
- */
-const withdrawRequest = async (req, res) => {
-    createVerificationRequest(req.body, res, 'withdrawAfterOtpVerification')
 
-}
 
 /**
  * Method to request user login
@@ -443,22 +434,56 @@ const getUser = async (email = null, phone = null, withAttr = false, req = null,
 const getUsers = async (req, res) => {
     try {
         const { role } = req.query;
-        let users;
 
         if (role === 'driver') {
-            users = await Drivers.findAll({
+            const users = await Drivers.findAll({
                 include: [{
                     model: User,
                     as: 'user',
                     attributes: ['id', 'email', 'phone', 'createdAt']
                 }]
             });
-        } else {
-            // Default user fetch logic if needed
-            users = await User.findAll();
+            return res.status(200).send(utils.responseSuccess(users));
         }
 
-        return res.status(200).send(utils.responseSuccess(users));
+        // Fetch users with attributes using raw query for performance
+        const createat = process.env.DB_DIALECT == 'mysql' ? 'u.createdAt' : 'u."createdAt"';
+        const updateat = process.env.DB_DIALECT == 'mysql' ? 'u.updatedAt' : 'u."updatedAt"';
+        
+        const sql = `SELECT u.id, u.email, u.phone, ${createat}, ${updateat}, a.slug, ua.value 
+                     FROM users u
+                     LEFT JOIN user_attributes ua ON u.id = ua.user_id 
+                     LEFT JOIN attributes a ON ua.attribute_id = a.id
+                     ORDER BY u.id DESC`;
+
+        const [results] = await db.sequelize.query(sql);
+        
+        const usersMap = new Map();
+
+        for (const row of results) {
+            if (!usersMap.has(row.id)) {
+                usersMap.set(row.id, {
+                    id: row.id,
+                    email: row.email,
+                    phone: row.phone,
+                    createdAt: row.createdAt,
+                    updatedAt: row.updatedAt,
+                    role: 'customer' // Default role
+                });
+            }
+
+            if (row.slug && row.value) {
+                const user = usersMap.get(row.id);
+                let val = row.value;
+                // Attempt to parse JSON values
+                if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+                    try { val = JSON.parse(val); } catch(e) {}
+                }
+                user[row.slug] = val;
+            }
+        }
+
+        return res.status(200).send(utils.responseSuccess(Array.from(usersMap.values())));
     } catch (error) {
         console.error('Error fetching users:', error);
         return res.status(500).send(utils.responseError(error.message));
@@ -962,7 +987,6 @@ module.exports = {
     unasignRole,
     resetPassword,
     createAuthDetail,
-    withdrawRequest,
     getUsers,
     createUserByAdmin,
     updateUserByAdmin,

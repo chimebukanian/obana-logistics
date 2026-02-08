@@ -74,7 +74,7 @@ const swaggerOptions = {
             version: '1.0.0',
             description: 'Obana E-Commerce API Docummentation',
             contact: {
-                name: "Elvis Chukwu"
+                name: "Chimebuka Anyanwu"
             },
         },
         servers: [

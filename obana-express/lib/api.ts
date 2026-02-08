@@ -55,6 +55,11 @@ class ApiClient {
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
 
+        
+        if (originalRequest.url?.includes('/users/token') || originalRequest.url?.includes('/users/logout')) {
+          return Promise.reject(error);
+        }
+
         if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -69,8 +74,7 @@ class ApiClient {
               this.accessToken = access_token;
               localStorage.setItem('access_token', access_token);
               this.client.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-              console.log("Tooken", access_token);
-              console.log('Token refreshed successfully', this.client.defaults.headers.common['Authorization']);
+              originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
               return this.client(originalRequest);
             }
           } catch (refreshError) {
@@ -85,8 +89,10 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async signup(email: string, phone: string, password: string, role: string) {
+  async signup(first_name: string, last_name: string, email: string, phone: string, password: string, role: string) {
     const response = await this.client.post<ApiResponse>('/users/signup', {
+      first_name,
+      last_name,
       email,
       phone,
       password,
@@ -146,6 +152,10 @@ class ApiClient {
       localStorage.removeItem('user');
       this.accessToken = null;
       delete this.client.defaults.headers.common['Authorization'];
+
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/login')) {
+        window.location.href = '/auth/login';
+      }
     }
   }
 
@@ -202,6 +212,11 @@ class ApiClient {
     return response.data;
   }
 
+  async getAllUsers() {
+    const response = await this.client.get<ApiResponse>('/users');
+    return response.data;
+  }
+
   async getAdminStats() {
     const response = await this.client.get<ApiResponse>('/shipments/admin/stats');
     return response.data;
@@ -218,6 +233,11 @@ class ApiClient {
       notes,
       location,
     });
+    return response.data;
+  }
+
+  async deleteShipment(id: string) {
+    const response = await this.client.delete<ApiResponse>(`/shipments/${id}`);
     return response.data;
   }
 

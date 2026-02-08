@@ -46,7 +46,7 @@ const router = Router();
  *           type: string
  *           description: The email or phone number of the user
  *       example:
- *         user_identification: "elvisonyedika@gmail.com"
+ *         user_identification: "chimebukaanyanwu@gmail.com"
  * 
  *     token_details:
  *       type: object
@@ -79,15 +79,15 @@ const router = Router();
  *       type: object
  *       example:
  *         user_information:
- *          first_name: Elvis
- *          last_name: Chukwu
+ *          first_name: Chimebuka
+ *          last_name: Anyanwu
  *          location: Nigeria
  *          language: ENglish
  *          user_imgage: "https://tajiri.xyz/images"
  *         partner_information:
  *          title: Mr
- *          full_name: Chukwu Elvis
- *          phone: 08160581957
+ *          full_name: Chimebuka Anyanwu
+ *          phone: 08069331070
  *          state: Lagos
  *          lga: Eti-Osa
  *          full_address: '1, Mushafau Lasisi, Street'
@@ -97,7 +97,7 @@ const router = Router();
  *          partner_imgage: "https://tajiri.xyz/images"
  *         payment_information:
  *          bank_name: GTB
- *          account_name: Chukwu Elvis
+ *          account_name: Chimebuka Anyanwu
  *          account_number: '0101847426'
  *         training:
  *          score: 80%

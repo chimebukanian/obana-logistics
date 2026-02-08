@@ -268,7 +268,9 @@ const shipmentController = {
                 activeDrivers,
                 pendingShipments,
                 revenueResult,
-                recentActivity
+                recentTracking,
+                recentUsers,
+                recentRoutes
             ] = await Promise.all([
                 db.route_templates.count(),
                 db.drivers.count({ where: { status: 'active' } }),
@@ -287,8 +289,53 @@ const shipmentController = {
                         as: 'shipment',
                         attributes: ['shipment_reference', 'user_id']
                     }]
+                }),
+                db.users.findAll({
+                    limit: 5,
+                    order: [['createdAt', 'DESC']],
+                    attributes: ['email', 'phone', 'createdAt']
+                }),
+                db.route_templates.findAll({
+                    limit: 5,
+                    order: [['updatedAt', 'DESC']],
+                    attributes: ['origin_city', 'destination_city', 'updatedAt']
                 })
             ]);
+
+            // Normalize and merge activities
+            const activities = [];
+            
+            recentTracking.forEach(t => {
+                activities.push({
+                    type: 'shipment',
+                    description: t.description || t.status,
+                    performed_by: t.performed_by,
+                    reference: t.shipment?.shipment_reference,
+                    createdAt: t.createdAt
+                });
+            });
+
+            recentUsers.forEach(u => {
+                activities.push({
+                    type: 'user',
+                    description: 'New User Signup',
+                    performed_by: u.email,
+                    reference: u.phone,
+                    createdAt: u.createdAt
+                });
+            });
+
+            recentRoutes.forEach(r => {
+                activities.push({
+                    type: 'route',
+                    description: 'Route Template Updated',
+                    performed_by: 'System',
+                    reference: `${r.origin_city} -> ${r.destination_city}`,
+                    createdAt: r.updatedAt
+                });
+            });
+
+            const sortedActivities = activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
 
             return res.status(200).json({
                 success: true,
@@ -297,9 +344,8 @@ const shipmentController = {
                     activeDrivers,
                     pendingShipments,
                     revenue: revenueResult || 0,
-                    recentActivity
-                }
-            });
+                    recentActivity: sortedActivities
+            }});
         } catch (error) {
             console.error('Error fetching admin stats:', error);
             return res.status(500).json({ success: false, message: 'Error fetching stats' });
@@ -818,7 +864,7 @@ getAllShipments: async (req, res) => {
             const { status, description, location, notes, source = 'system', performed_by } = req.body;
             
             // Validate status
-            const validStatuses = ['pending', 'in_transit', 'delivered', 'failed', 'cancelled', 'returned'];
+            const validStatuses = ['pending', 'picked_up', 'in_transit', 'delivered', 'failed', 'cancelled', 'returned'];
             if (!validStatuses.includes(status)) {
                 return res.status(400).json({
                     success: false,
@@ -844,10 +890,13 @@ getAllShipments: async (req, res) => {
             
             await shipment.update(updateData);
 
+            // Map 'pending' to 'created' for tracking events as 'pending' is not usually a tracking event status
+            const trackingStatus = status === 'pending' ? 'created' : status;
+
             // Create tracking event
             await db.shipment_tracking.create({
                 shipment_id: shipment.id,
-                status,
+                status: trackingStatus,
                 location: location || '',
                 description: description || `Status updated to ${status}`,
                 notes: notes || '',
@@ -1087,6 +1136,27 @@ getAllShipments: async (req, res) => {
                 success: false,
                 message: 'Error processing webhook'
             });
+        }
+    },
+
+    /**
+     * Delete shipment (Admin only)
+     */
+    deleteShipment: async (req, res) => {
+        try {
+            const { shipment_id } = req.params;
+            const shipment = await db.shippings.findByPk(shipment_id);
+            
+            if (!shipment) {
+                return res.status(404).json({ success: false, message: 'Shipment not found' });
+            }
+
+            await shipment.destroy();
+            
+            return res.status(200).json({ success: true, message: 'Shipment deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting shipment:', error);
+            return res.status(500).json({ success: false, message: 'Error deleting shipment' });
         }
     }
 };
