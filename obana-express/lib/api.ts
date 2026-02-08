@@ -55,6 +55,11 @@ class ApiClient {
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
 
+        
+        if (originalRequest.url?.includes('/users/token') || originalRequest.url?.includes('/users/logout')) {
+          return Promise.reject(error);
+        }
+
         if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -69,8 +74,7 @@ class ApiClient {
               this.accessToken = access_token;
               localStorage.setItem('access_token', access_token);
               this.client.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-              console.log("Tooken", access_token);
-              console.log('Token refreshed successfully', this.client.defaults.headers.common['Authorization']);
+              originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
               return this.client(originalRequest);
             }
           } catch (refreshError) {
